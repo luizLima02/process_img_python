@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import gc
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -13,7 +14,8 @@ from PIL import Image, ImageTk
 
 Carregado = [False]
 Processada = [False]
-
+Img_Original = []
+Img_Processada = []
 
 #setup window
 def initWindow():
@@ -53,6 +55,10 @@ def attLog(msg):
 def abrirImg():
     global Img_Original
     global Img_Processada
+    global Carregado
+    global Processada
+    Img_Original =   []
+    Img_Processada = []
     filetypes = (('image files', ('*.png', '*.bmp', '*.dib' , '*.jpeg', '*.jpg', '*.jpe', '*.jp2', '*.webp', '*.avif', '*.pbm', '*.pgm', '*.ppm', '*.pxm', '*.pnm', '*.pfm', '*.sr', '*.ras' , '*.tiff', '*.tif', '*.exr', '*.hdr', '*.pic')),
                  ("all files", '*.*'))
     #selecione o arquivo
@@ -67,6 +73,10 @@ def abrirImg():
 
 
 def salvarImg():
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
     #formatos suportados pelo opencv
     filetypes = ['.png', '.bmp', '.dib' , '.jpeg', '.jpg', '.jpe', '.jp2', '.webp', '.avif', '.pbm', '.pgm', '.ppm', '.pxm', '.pnm', '.pfm', '.sr', '.ras' , '.tiff', '.tif', '.exr', '.hdr', '.pic']
     #faz algo se tiver uma imagem carregada
@@ -91,6 +101,7 @@ def salvarImg():
         attLog("nenhuma imagem carregada")
 
 def visualizarImgOriginal():
+    global Img_Original
     if Carregado[0]: 
         cv2.imshow('ImageWindow', Img_Original)
         cv2.waitKey(0)
@@ -98,6 +109,8 @@ def visualizarImgOriginal():
         attLog("nenhuma imagem carregada")
 
 def visualizarImgProcessada():
+    global Img_Processada
+    
     if Processada[0]: 
         cv2.imshow('ImageWindow', Img_Processada)
         cv2.waitKey(0)
@@ -105,6 +118,10 @@ def visualizarImgProcessada():
         attLog("nenhuma imagem Processada")
 
 def negativo():
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
     if Carregado[0]:
         Processada[0] = True
         w, h = Img_Original.shape
@@ -121,6 +138,10 @@ def negativo():
         attLog("Sem imagem carregada para processar!")
 
 def logaritmo():
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
     if Carregado[0]:
         Processada[0] = True
         #pede a base do logaritimo
@@ -158,6 +179,10 @@ def logaritmo():
        attLog("Sem imagem carregada para processar!")
 
 def correcaoGama():
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
     if Carregado[0]:
         Processada[0] = True
         w, h = Img_Original.shape
@@ -179,6 +204,72 @@ def correcaoGama():
         Processada[0] = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
         attLog("Sem imagem carregada para processar!")
+
+def histograma(Img):
+    cores = np.array(Img)
+    cores = cores.flatten()
+    # Cria o histograma
+    plt.hist(cores, bins=256, range=(0,256), color='black')
+    # Mostra o histograma
+    plt.show()
+
+def showHistogramaOrigin():
+    global Img_Original
+    if Carregado[0]:
+        histograma(Img_Original)
+        attLog("Histograma mostrado")
+    else:
+        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+        attLog("Sem imagem carregada!")
+
+def showHistogramaProcess():
+    global Img_Processada
+    if Processada[0]:
+        attLog("Histograma mostrado")
+        histograma(Img_Processada)
+    else:
+        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+        attLog("Sem imagem Processada!")
+
+
+def equalizar():
+    global Carregado
+    global Processada
+    global Img_Original
+    if Carregado[0]:
+        equalizarHistogramaG(Img_Original)
+        attLog("Imagem equalizada!")
+    else:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+        attLog("Sem imagem carregada!")
+
+def equalizarHistogramaG(Img):
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
+    Processada[0] = True
+    cores = np.array(Img)
+    cores = cores.flatten()
+    Img_Processada = Img_Original * 1
+    hist = np.zeros(256)
+    for i in range(len(cores)):
+        hist[cores[i]] = hist[cores[i]] + 1 
+    histCulm = np.zeros(256)
+    acumulador = 0
+    for i in range(len(hist)):
+        acumulador = acumulador + hist[i]
+        histCulm[i] = acumulador
+    for i in range(len(histCulm)):
+        histCulm[i] = int((histCulm[i]/len(cores))*255)
+
+    w, h = Img_Processada.shape
+    for i in range(w):
+        for j in range(h):
+            Img_Processada[i][j] = histCulm[Img_Processada[i][j]]
+     
+    cv2.imshow("Equalizada",Img_Processada)
+    cv2.waitKey(0)
 
 
 #conteudo
@@ -205,14 +296,16 @@ def initContent():
     editMenu.add_command(label="Negativo", command=negativo)
     editMenu.add_command(label="Logaritmo", command=logaritmo)
     editMenu.add_command(label="Gamma", command=correcaoGama)
+    #histograma
+    histMenu = Menu(editMenu, tearoff=0)
+    editMenu.add_cascade(label="Histograma", menu=histMenu)
+    histMenu.add_command(label="histograma Original", command=showHistogramaOrigin)
+    histMenu.add_command(label="histograma Process", command=showHistogramaProcess)
+    histMenu.add_command(label="equalizar", command=equalizar)
 
 
 
 if __name__ == "__main__":
-    Img_Original = []
-    Img_Processada = []
     initWindow()
     initContent()
     window.mainloop()
-    if(Carregado == True):
-        print(Img_Original[0][0])
