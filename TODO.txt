@@ -1,6 +1,6 @@
-Negativo
-Transformações logarítmicas
-potência (correção de gama) 
+Negativo - OK
+Transformações logarítmicas - OK
+potência (correção de gama) - OK
 linear definidas por partes
 Esteganografia
 exibição do histograma e equalização de histograma.

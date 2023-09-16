@@ -2,12 +2,18 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox as mesBox
 from tkinter import simpledialog as dialog
 from PIL import Image, ImageTk
+
+
+Carregado = [False]
+Processada = [False]
+
 
 #setup window
 def initWindow():
@@ -45,22 +51,16 @@ def attLog(msg):
 
 #funcoes de processar img
 def abrirImg():
-    global Carregado
-    global Processada
     global Img_Original
     global Img_Processada
-    global imgMostrar
-    global imglabel
     filetypes = (('image files', ('*.png', '*.bmp', '*.dib' , '*.jpeg', '*.jpg', '*.jpe', '*.jp2', '*.webp', '*.avif', '*.pbm', '*.pgm', '*.ppm', '*.pxm', '*.pnm', '*.pfm', '*.sr', '*.ras' , '*.tiff', '*.tif', '*.exr', '*.hdr', '*.pic')),
                  ("all files", '*.*'))
     #selecione o arquivo
-    filepath = filedialog.askopenfilename(title="Abrir Imagem",
-                                          initialdir="/",
-                                          filetypes=filetypes)
+    filepath = filedialog.askopenfilename(title="Abrir Imagem", initialdir="/", filetypes=filetypes)
     if(cv2.haveImageReader(filepath) == True):
         attLog("Imagem Carregada!")
         Img_Original = cv2.imread(filepath, 0)
-        Carregado = True
+        Carregado[0] = True
     else:
         attLog("Falha ao abrir a Imagem")
         mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
@@ -70,7 +70,7 @@ def salvarImg():
     #formatos suportados pelo opencv
     filetypes = ['.png', '.bmp', '.dib' , '.jpeg', '.jpg', '.jpe', '.jp2', '.webp', '.avif', '.pbm', '.pgm', '.ppm', '.pxm', '.pnm', '.pfm', '.sr', '.ras' , '.tiff', '.tif', '.exr', '.hdr', '.pic']
     #faz algo se tiver uma imagem carregada
-    if(Carregado == True):
+    if(Carregado[0] == True):
         #seleciona o formato
         formato = dialog.askstring("Input", "Selecione o formato que deseja salvar a Imagem:\n(ex: .png)")
         if(formato.lower() in filetypes):
@@ -79,7 +79,7 @@ def salvarImg():
             nome = dialog.askstring("Input", "Digite como deseja salvar o nome do arquivo")
             nome = nome + (formato.lower())
             os.chdir(filepath)
-            if Processada == False:
+            if Processada[0] == False:
                 cv2.imwrite(nome, Img_Original)
                 attLog("Imagem Original Salva em escala de cinza")
             else:
@@ -91,18 +91,94 @@ def salvarImg():
         attLog("nenhuma imagem carregada")
 
 def visualizarImgOriginal():
-    if Carregado: 
+    if Carregado[0]: 
         cv2.imshow('ImageWindow', Img_Original)
         cv2.waitKey(0)
     else:
         attLog("nenhuma imagem carregada")
 
 def visualizarImgProcessada():
-    if Processada: 
+    if Processada[0]: 
         cv2.imshow('ImageWindow', Img_Processada)
         cv2.waitKey(0)
     else:
         attLog("nenhuma imagem Processada")
+
+def negativo():
+    if Carregado[0]:
+        Processada[0] = True
+        w, h = Img_Original.shape
+        Img_Processada = np.zeros((w, h), np.uint8)
+        for i in range(w):
+            for j in range(h):
+                Img_Processada[i][j] = (255 - Img_Original[i][j])
+        cv2.imshow('ImageWindow', Img_Processada)
+        cv2.waitKey(0)
+        attLog("Imagem Processada: Negativo")
+    else:
+        Processada[0] = False
+        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+        attLog("Sem imagem carregada para processar!")
+
+def logaritmo():
+    if Carregado[0]:
+        Processada[0] = True
+        #pede a base do logaritimo
+        base = dialog.askstring("Input", "Selecione a base logaritmica a ser utilizada. \nou ln para logaritmo natural(base e)")
+        if(base.lower() == "ln"):
+            w, h = Img_Original.shape
+            Img_Processada = np.float32(Img_Original)
+            for i in range(w):
+                for j in range(h):
+                    if(Img_Original[i][j] != 0):
+                        Img_Processada[i][j] = math.log(Img_Processada[i][j])
+
+            cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
+            Img_Processada = np.int8(Img_Processada)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+            attLog("Imagem Processada: Logaritmo")
+        else:
+            base = int(base)
+            w, h = Img_Original.shape
+            Img_Processada = np.float32(Img_Original)
+            for i in range(w):
+                for j in range(h):
+                    if(Img_Original[i][j] != 0):
+                        Img_Processada[i][j] = math.log(Img_Processada[i][j], base)
+
+            cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
+            Img_Processada = np.int8(Img_Processada)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+            attLog("Imagem Processada: Logaritmo")
+    else:
+       Processada[0] = False
+       mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+       attLog("Sem imagem carregada para processar!")
+
+def correcaoGama():
+    if Carregado[0]:
+        Processada[0] = True
+        w, h = Img_Original.shape
+        #cria uma imagem normalizada de floats de [0,1]
+        Img_Processada = np.float32(Img_Original/255.0)
+        gamma = dialog.askfloat("Input", "Selecione o gama a ser utilizado")
+        for i in range(w):
+            for j in range(h):
+                Img_Processada[i][j] = math.pow(Img_Processada[i][j], gamma)
+
+        #coloca a imagem de [0,255]
+        Img_Processada = Img_Processada * 255
+        #transfoma a imagem em um array de floats novamente
+        Img_Processada = np.int8(Img_Processada)
+        cv2.imshow('ImageWindow', Img_Processada)
+        cv2.waitKey(0)
+        attLog("Imagem Processada: Negativo")
+    else:
+        Processada[0] = False
+        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+        attLog("Sem imagem carregada para processar!")
 
 
 #conteudo
@@ -124,12 +200,15 @@ def initContent():
     viewMenu.add_command(label="original img", command=visualizarImgOriginal)
     viewMenu.add_command(label="process  img", command=visualizarImgProcessada)
     
+    editMenu = Menu(barraMenu, tearoff=0)
+    barraMenu.add_cascade(label="Edit",menu=editMenu)
+    editMenu.add_command(label="Negativo", command=negativo)
+    editMenu.add_command(label="Logaritmo", command=logaritmo)
+    editMenu.add_command(label="Gamma", command=correcaoGama)
 
 
 
 if __name__ == "__main__":
-    Carregado = False
-    Processada = False
     Img_Original = []
     Img_Processada = []
     initWindow()
