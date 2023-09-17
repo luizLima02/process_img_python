@@ -103,8 +103,11 @@ def salvarImg():
 def visualizarImgOriginal():
     global Img_Original
     if Carregado[0]: 
-        cv2.imshow('ImageWindow', Img_Original)
-        cv2.waitKey(0)
+        try:
+            cv2.imshow('ImageWindow', Img_Original)
+            cv2.waitKey(0)
+        except:
+            attLog("erro ao mostrar imagem")
     else:
         attLog("nenhuma imagem carregada")
 
@@ -112,8 +115,11 @@ def visualizarImgProcessada():
     global Img_Processada
     
     if Processada[0]: 
-        cv2.imshow('ImageWindow', Img_Processada)
-        cv2.waitKey(0)
+        try:
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        except:
+            attLog("erro ao mostrar imagem")
     else:
         attLog("nenhuma imagem Processada")
 
@@ -147,32 +153,38 @@ def logaritmo():
         #pede a base do logaritimo
         base = dialog.askstring("Input", "Selecione a base logaritmica a ser utilizada. \nou ln para logaritmo natural(base e)")
         if(base.lower() == "ln"):
-            w, h = Img_Original.shape
-            Img_Processada = np.float32(Img_Original)
-            for i in range(w):
-                for j in range(h):
-                    if(Img_Original[i][j] != 0):
-                        Img_Processada[i][j] = math.log(Img_Processada[i][j])
+            try:
+                w, h = Img_Original.shape
+                Img_Processada = np.float32(Img_Original)
+                for i in range(w):
+                    for j in range(h):
+                        if(Img_Original[i][j] != 0):
+                            Img_Processada[i][j] = math.log(Img_Processada[i][j])
 
-            cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
-            Img_Processada = np.int8(Img_Processada)
-            cv2.imshow('ImageWindow', Img_Processada)
-            cv2.waitKey(0)
-            attLog("Imagem Processada: Logaritmo")
+                cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
+                Img_Processada = np.int8(Img_Processada)
+                cv2.imshow('ImageWindow', Img_Processada)
+                cv2.waitKey(0)
+                attLog("Imagem Processada: Logaritmo")
+            except:
+                attLog("erro ao processar img: logaritmo")
         else:
-            base = int(base)
-            w, h = Img_Original.shape
-            Img_Processada = np.float32(Img_Original)
-            for i in range(w):
-                for j in range(h):
-                    if(Img_Original[i][j] != 0):
-                        Img_Processada[i][j] = math.log(Img_Processada[i][j], base)
+            try:
+                base = int(base)
+                w, h = Img_Original.shape
+                Img_Processada = np.float32(Img_Original)
+                for i in range(w):
+                    for j in range(h):
+                        if(Img_Original[i][j] != 0):
+                            Img_Processada[i][j] = math.log(Img_Processada[i][j], base)
 
-            cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
-            Img_Processada = np.int8(Img_Processada)
-            cv2.imshow('ImageWindow', Img_Processada)
-            cv2.waitKey(0)
-            attLog("Imagem Processada: Logaritmo")
+                cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
+                Img_Processada = np.int8(Img_Processada)
+                cv2.imshow('ImageWindow', Img_Processada)
+                cv2.waitKey(0)
+                attLog("Imagem Processada: Logaritmo")
+            except:
+                attLog("erro ao processar img: logaritmo")
     else:
        Processada[0] = False
        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
@@ -184,34 +196,40 @@ def correcaoGama():
     global Img_Original
     global Img_Processada
     if Carregado[0]:
-        Processada[0] = True
-        w, h = Img_Original.shape
-        #cria uma imagem normalizada de floats de [0,1]
-        Img_Processada = np.float32(Img_Original/255.0)
-        gamma = dialog.askfloat("Input", "Selecione o gama a ser utilizado")
-        for i in range(w):
-            for j in range(h):
-                Img_Processada[i][j] = math.pow(Img_Processada[i][j], gamma)
+        try:
+            Processada[0] = True
+            w, h = Img_Original.shape
+            #cria uma imagem normalizada de floats de [0,1]
+            Img_Processada = np.float32(Img_Original/255.0)
+            gamma = dialog.askfloat("Input", "Selecione o gama a ser utilizado")
+            for i in range(w):
+                for j in range(h):
+                    Img_Processada[i][j] = math.pow(Img_Processada[i][j], gamma)
 
-        #coloca a imagem de [0,255]
-        Img_Processada = Img_Processada * 255
-        #transfoma a imagem em um array de floats novamente
-        Img_Processada = np.int8(Img_Processada)
-        cv2.imshow('ImageWindow', Img_Processada)
-        cv2.waitKey(0)
-        attLog("Imagem Processada: Negativo")
+            #coloca a imagem de [0,255]
+            Img_Processada = Img_Processada * 255
+            #transfoma a imagem em um array de floats novamente
+            Img_Processada = np.int8(Img_Processada)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+            attLog("Imagem Processada: Gamma")
+        except:
+            attLog("erro ao processar img: Gamma")
     else:
         Processada[0] = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
         attLog("Sem imagem carregada para processar!")
 
 def histograma(Img):
-    cores = np.array(Img)
-    cores = cores.flatten()
-    # Cria o histograma
-    plt.hist(cores, bins=256, range=(0,256), color='black')
-    # Mostra o histograma
-    plt.show()
+    try:
+        cores = np.array(Img)
+        cores = cores.flatten()
+        # Cria o histograma
+        plt.hist(cores, bins=256, range=(0,256), color='black')
+        # Mostra o histograma
+        plt.show()
+    except:
+        attLog("erro ao montar histograma")
 
 def showHistogramaOrigin():
     global Img_Original
@@ -244,32 +262,35 @@ def equalizar():
         attLog("Sem imagem carregada!")
 
 def equalizarHistogramaG(Img):
-    global Carregado
-    global Processada
-    global Img_Original
-    global Img_Processada
-    Processada[0] = True
-    cores = np.array(Img)
-    cores = cores.flatten()
-    Img_Processada = Img_Original * 1
-    hist = np.zeros(256)
-    for i in range(len(cores)):
-        hist[cores[i]] = hist[cores[i]] + 1 
-    histCulm = np.zeros(256)
-    acumulador = 0
-    for i in range(len(hist)):
-        acumulador = acumulador + hist[i]
-        histCulm[i] = acumulador
-    for i in range(len(histCulm)):
-        histCulm[i] = int((histCulm[i]/len(cores))*255)
+    try:
+        global Carregado
+        global Processada
+        global Img_Original
+        global Img_Processada
+        Processada[0] = True
+        cores = np.array(Img)
+        cores = cores.flatten()
+        Img_Processada = Img_Original * 1
+        hist = np.zeros(256)
+        for i in range(len(cores)):
+            hist[cores[i]] = hist[cores[i]] + 1 
+        histCulm = np.zeros(256)
+        acumulador = 0
+        for i in range(len(hist)):
+            acumulador = acumulador + hist[i]
+            histCulm[i] = acumulador
+        for i in range(len(histCulm)):
+            histCulm[i] = int((histCulm[i]/len(cores))*255)
 
-    w, h = Img_Processada.shape
-    for i in range(w):
-        for j in range(h):
-            Img_Processada[i][j] = histCulm[Img_Processada[i][j]]
-     
-    cv2.imshow("Equalizada",Img_Processada)
-    cv2.waitKey(0)
+        w, h = Img_Processada.shape
+        for i in range(w):
+            for j in range(h):
+                Img_Processada[i][j] = histCulm[Img_Processada[i][j]]
+        
+        cv2.imshow("Equalizada",Img_Processada)
+        cv2.waitKey(0)
+    except:
+        attLog("erro ao equalizar imagem")
 
 
 #conteudo
