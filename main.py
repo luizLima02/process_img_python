@@ -16,6 +16,8 @@ Carregado = [False]
 Processada = [False]
 Img_Original = []
 Img_Processada = []
+Filtro = []
+Log = ""
 
 #setup window
 def initWindow():
@@ -23,32 +25,13 @@ def initWindow():
     global Log
     global LogFrame
     window = Tk()
-    window.resizable(False, False)
+    #window.resizable(False, False)
     window.geometry('450x600')
     icone = PhotoImage(file="res/icone.png")
     window.iconphoto(True, icone)
     window.title("processamento de images")
     window.config(background="#22c995")
-    LogFrame = Frame(window)
-    LogFrame.place(x=10, y=190, width=430, heigh=400)
-    LogFrame.grid_columnconfigure(0, weight=1)
-    LogFrame.grid_rowconfigure(0,weight=1)
-    #log
-    Log = Text(LogFrame, font=("Arial", "10"),width=430, heigh=580, bg="#ffffff")
-    Log.pack()
-    Log.insert(INSERT,"Log:")
-    Log.insert(INSERT, "\n"+("_"*58))
-    Log.config(state=DISABLED)
-    Log.grid(sticky=N + E + S + W)
-    scroll = Scrollbar(Log)
-    scroll.config(width=10)
-    scroll.pack(side=RIGHT,fill=Y)
-    Log.config(yscrollcommand=scroll.set)
 
-def attLog(msg):
-    Log.config(state=NORMAL)
-    Log.insert(INSERT,"\n"+msg)
-    Log.config(state=DISABLED)
 
 
 #funcoes de processar img
@@ -64,11 +47,9 @@ def abrirImg():
     #selecione o arquivo
     filepath = filedialog.askopenfilename(title="Abrir Imagem", initialdir="/", filetypes=filetypes)
     if(cv2.haveImageReader(filepath) == True):
-        attLog("Imagem Carregada!")
         Img_Original = cv2.imread(filepath, 0)
         Carregado[0] = True
     else:
-        attLog("Falha ao abrir a Imagem")
         mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
 
 
@@ -91,14 +72,12 @@ def salvarImg():
             os.chdir(filepath)
             if Processada[0] == False:
                 cv2.imwrite(nome, Img_Original)
-                attLog("Imagem Original Salva em escala de cinza")
             else:
                 cv2.imwrite(nome, Img_Processada)
-                attLog("Imagem Processada Salva em escala de cinza")
         else:
             mesBox.showerror(title="erro de tipo", message="Formato nao suportado. \nPorfavor escolha um válido")     
     else:
-        attLog("nenhuma imagem carregada")
+        mesBox.showinfo(title="", message="nenhuma imagem carregada")
 
 def visualizarImgOriginal():
     global Img_Original
@@ -107,9 +86,9 @@ def visualizarImgOriginal():
             cv2.imshow('ImageWindow', Img_Original)
             cv2.waitKey(0)
         except:
-            attLog("erro ao mostrar imagem")
+            mesBox.showinfo(title="", message="erro ao mostrar imagem")
     else:
-        attLog("nenhuma imagem carregada")
+        mesBox.showinfo(title="", message="nenhuma imagem carregada")
 
 def visualizarImgProcessada():
     global Img_Processada
@@ -119,9 +98,9 @@ def visualizarImgProcessada():
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
-            attLog("erro ao mostrar imagem")
+            mesBox.showinfo(title="", message="erro ao mostrar imagem")
     else:
-        attLog("nenhuma imagem Processada")
+        mesBox.showinfo(title="", message="nenhuma imagem processada")
 
 def negativo():
     global Carregado
@@ -137,11 +116,9 @@ def negativo():
                 Img_Processada[i][j] = (255 - Img_Original[i][j])
         cv2.imshow('ImageWindow', Img_Processada)
         cv2.waitKey(0)
-        attLog("Imagem Processada: Negativo")
     else:
         Processada[0] = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-        attLog("Sem imagem carregada para processar!")
 
 def logaritmo():
     global Carregado
@@ -165,9 +142,8 @@ def logaritmo():
                 Img_Processada = np.int8(Img_Processada)
                 cv2.imshow('ImageWindow', Img_Processada)
                 cv2.waitKey(0)
-                attLog("Imagem Processada: Logaritmo")
             except:
-                attLog("erro ao processar img: logaritmo")
+                mesBox.showinfo(title="", message="erro ao processar imagem")
         else:
             try:
                 base = int(base)
@@ -182,13 +158,12 @@ def logaritmo():
                 Img_Processada = np.int8(Img_Processada)
                 cv2.imshow('ImageWindow', Img_Processada)
                 cv2.waitKey(0)
-                attLog("Imagem Processada: Logaritmo")
             except:
-                attLog("erro ao processar img: logaritmo")
+                mesBox.showinfo(title="", message="erro ao processar imagem")
     else:
        Processada[0] = False
        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-       attLog("Sem imagem carregada para processar!")
+       mesBox.showinfo(title="", message="sem imagem carregada")
 
 def correcaoGama():
     global Carregado
@@ -212,13 +187,11 @@ def correcaoGama():
             Img_Processada = np.int8(Img_Processada)
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
-            attLog("Imagem Processada: Gamma")
         except:
-            attLog("erro ao processar img: Gamma")
+            mesBox.showinfo(title="", message="erro ao processar imagem")
     else:
         Processada[0] = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-        attLog("Sem imagem carregada para processar!")
 
 def histograma(Img):
     try:
@@ -229,25 +202,23 @@ def histograma(Img):
         # Mostra o histograma
         plt.show()
     except:
-        attLog("erro ao montar histograma")
+        mesBox.showinfo(title="", message="erro ao montar histograma")
 
 def showHistogramaOrigin():
     global Img_Original
     if Carregado[0]:
         histograma(Img_Original)
-        attLog("Histograma mostrado")
+       
     else:
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-        attLog("Sem imagem carregada!")
+        
 
 def showHistogramaProcess():
     global Img_Processada
     if Processada[0]:
-        attLog("Histograma mostrado")
         histograma(Img_Processada)
     else:
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-        attLog("Sem imagem Processada!")
 
 
 def equalizar():
@@ -256,10 +227,8 @@ def equalizar():
     global Img_Original
     if Carregado[0]:
         equalizarHistogramaG(Img_Original)
-        attLog("Imagem equalizada!")
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
-        attLog("Sem imagem carregada!")
 
 def equalizarHistogramaG(Img):
     try:
@@ -290,7 +259,7 @@ def equalizarHistogramaG(Img):
         cv2.imshow("Equalizada",Img_Processada)
         cv2.waitKey(0)
     except:
-        attLog("erro ao equalizar imagem")
+        mesBox.showinfo(title="", message="erro ao processar imagem")
 
 
 #conteudo
