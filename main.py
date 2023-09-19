@@ -102,6 +102,23 @@ def visualizarImgProcessada():
     else:
         mesBox.showinfo(title="", message="nenhuma imagem processada")
 
+#primitivas
+
+def getPixel(Img, x, y):
+    l, c = Img_Original.shape
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return 0
+    else:
+        return Img[y][x]
+
+def setPixel(Img, x, y, intensidade):
+    l, c = Img_Original.shape
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return
+    else:
+        Img[y][x] = intensidade
+#processos basicos
+
 def negativo():
     global Carregado
     global Processada
@@ -174,6 +191,7 @@ def correcaoGama():
         try:
             Processada[0] = True
             w, h = Img_Original.shape
+        
             #cria uma imagem normalizada de floats de [0,1]
             Img_Processada = np.float32(Img_Original/255.0)
             gamma = dialog.askfloat("Input", "Selecione o gama a ser utilizado")
@@ -185,6 +203,8 @@ def correcaoGama():
             Img_Processada = Img_Processada * 255
             #transfoma a imagem em um array de floats novamente
             Img_Processada = np.int8(Img_Processada)
+            print(getPixel(Img_Processada, h-1, w-1))
+            print(Img_Processada[w-1,h-1])
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
@@ -192,6 +212,31 @@ def correcaoGama():
     else:
         Processada[0] = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+
+def limiarizacao():
+    global Processada
+    global Img_Original
+    global Img_Processada
+    if Carregado[0]:
+        try:
+            Processada[0] = True
+            limiar = dialog.askinteger("Input", "Selecione o Limiar a ser utilizado")
+            l, c = Img_Original.shape
+            Img_Processada = np.zeros((l, c), np.uint8)
+            for i in range(l):
+                for j in range(c):
+                        if(Img_Original[i][j] >= limiar):
+                            Img_Processada[i][j] = 255
+                        else:
+                            Img_Processada[i][j] = 0 
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+    else:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+
+#histograma
 
 def histograma(Img):
     try:
@@ -286,6 +331,7 @@ def initContent():
     editMenu.add_command(label="Negativo", command=negativo)
     editMenu.add_command(label="Logaritmo", command=logaritmo)
     editMenu.add_command(label="Gamma", command=correcaoGama)
+    editMenu.add_command(label="Limiarizacao", command=limiarizacao)
     #histograma
     histMenu = Menu(editMenu, tearoff=0)
     editMenu.add_cascade(label="Histograma", menu=histMenu)
