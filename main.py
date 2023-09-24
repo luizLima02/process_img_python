@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import gc
+import tkinter as tk
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -18,6 +19,7 @@ Img_Original = []
 Img_Processada = []
 Filtro = []
 Log = ""
+Editing = False
 
 #setup window
 def initWindow():
@@ -236,8 +238,14 @@ def limiarizacao():
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
-#histograma
+def conv(filtro, fsize):
+    l, c = Img_Original.shape
+    center = math.floor(fsize/2)
+    for i in range(c): #y
+        for j in range(l): #x
+            print(Img_Original[i][j])
 
+#histograma
 def histograma(Img):
     try:
         cores = np.array(Img)
@@ -307,6 +315,22 @@ def equalizarHistogramaG(Img):
         mesBox.showinfo(title="", message="erro ao processar imagem")
 
 
+#editor de imagem
+def initEditWindow():
+    global editWind
+    editWind = Tk()
+    editWind.resizable(False, False)
+    editWind.geometry('1250x600')
+    editWind.title("editor de img")
+    editWind.config(background="#ffffff")
+    editing_frame = tk.Frame(editWind, width=200, height=600, bg="Black")
+    editing_frame.pack(side="left", fill="y")
+    
+def editar():
+    global editWind
+    initEditWindow()
+    editWind.mainloop()
+
 #conteudo
 def initContent():
     #barra do menu
@@ -332,6 +356,8 @@ def initContent():
     editMenu.add_command(label="Logaritmo", command=logaritmo)
     editMenu.add_command(label="Gamma", command=correcaoGama)
     editMenu.add_command(label="Limiarizacao", command=limiarizacao)
+    editMenu.add_command(label="editar", command=editar)
+
     #histograma
     histMenu = Menu(editMenu, tearoff=0)
     editMenu.add_cascade(label="Histograma", menu=histMenu)
@@ -345,3 +371,4 @@ if __name__ == "__main__":
     initWindow()
     initContent()
     window.mainloop()
+        

@@ -4,7 +4,7 @@ potência (correção de gama) - OK
 linear definidas por partes
 Esteganografia
 exibição do histograma e equalização de histograma.  ---OK
-Limiarização (Binarização); 
+Limiarização (Binarização); ok
 Aplicação de filtro genérico por convolução
 Filtro de suavização da média (simples e ponderado) 
 ---------------------------------------------------------
