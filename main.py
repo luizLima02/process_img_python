@@ -13,6 +13,7 @@ from tkinter import simpledialog as dialog
 from PIL import Image, ImageTk
 
 
+#Globais
 Carregado = [False]
 Processada = [False]
 Img_Original = []
@@ -37,7 +38,8 @@ def initWindow():
 
 
 
-#funcoes de processar img
+#funcoes de abrir, salvar e mostrar imagem
+
 def abrirImg():
     global Img_Original
     global Img_Processada
@@ -54,7 +56,6 @@ def abrirImg():
         Carregado[0] = True
     else:
         mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
-
 
 def salvarImg():
     global Carregado
@@ -121,6 +122,7 @@ def setPixel(Img, x, y, intensidade):
         return
     else:
         Img[y][x] = intensidade
+
 #processos basicos
 
 def negativo():
@@ -240,6 +242,67 @@ def limiarizacao():
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
+#Criacao de Filtro
+
+def criaFiltro3():
+    global Fsize
+    global Filtro
+    Fsize = 3
+    Filtro = np.zeros((Fsize, Fsize), np.float16)
+    #pede os valores para o Filtro
+    for i in range(Fsize):
+        for j in range(Fsize):
+            try:
+                num = dialog.askfloat("Input", f"valor para a posicao: {i} x {j}")
+                Filtro[i][j] = num
+            except:
+                mesBox.showerror(title="", message="Valor Invalido")
+
+
+def criaFiltro5():
+    global Fsize
+    global Filtro
+    Fsize = 5
+    Filtro = np.zeros((Fsize, Fsize), np.float16)
+    #pede os valores para o Filtro
+    for i in range(Fsize):
+        for j in range(Fsize):
+            try:
+                num = dialog.askfloat("Input", f"valor para a posicao: {i} x {j}")
+                Filtro[i][j] = num
+            except:
+                mesBox.showerror(title="", message="Valor Invalido")
+
+def criaFiltro9():
+    global Fsize
+    global Filtro
+    Fsize = 9
+    Filtro = np.zeros((Fsize, Fsize), np.float16)
+    #pede os valores para o Filtro
+    for i in range(Fsize):
+        for j in range(Fsize):
+            try:
+                num = dialog.askfloat("Input", f"valor para a posicao: {i} x {j}")
+                Filtro[i][j] = num
+            except:
+                mesBox.showerror(title="", message="Valor Invalido")
+
+#Aplicacao de Filtros
+
+def aplicaFiltro5(x, y, c):
+    global Img_Original
+    global Filtro
+    valores = [Filtro[c-2][c-2]*getPixel(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getPixel(Img_Original, x-1, y-2), Filtro[c-2][c]*getPixel(Img_Original, x, y-2), Filtro[c-2][c+1]*getPixel(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getPixel(Img_Original, x+2, y-2), #linha 1
+               Filtro[c-1][c-2]*getPixel(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getPixel(Img_Original, x-1, y-1), Filtro[c-1][c]*getPixel(Img_Original, x, y-1), Filtro[c-1][c+1]*getPixel(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getPixel(Img_Original, x+2, y-1), #linha 2
+               Filtro[c][c-2]*getPixel(Img_Original, x-2, y),     Filtro[c][c-1]*getPixel(Img_Original, x-1, y),     Filtro[c][c]*getPixel(Img_Original, x, y),     Filtro[c][c+1]*getPixel(Img_Original, x+1, y),     Filtro[c][c+2]*getPixel(Img_Original, x+2, y), #linha 3
+               Filtro[c+1][c-2]*getPixel(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getPixel(Img_Original, x-1, y+1), Filtro[c+1][c]*getPixel(Img_Original, x, y+1), Filtro[c+1][c+1]*getPixel(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getPixel(Img_Original, x+2, y+1), #linha 4
+               Filtro[c+2][c-2]*getPixel(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getPixel(Img_Original, x-1, y+2), Filtro[c+2][c]*getPixel(Img_Original, x, y+2), Filtro[c+2][c+1]*getPixel(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getPixel(Img_Original, x+2, y+2), #linha 5
+              ]
+    val = 0
+    for i in range(25):
+        val = val + valores[i]
+    return val
+
 def aplicaFiltro3(x, y, c):
     global Img_Original
     global Filtro
@@ -251,21 +314,31 @@ def aplicaFiltro3(x, y, c):
         val = val + valores[i]
     return val
 
-
 def conv():
     global Fsize
     global Img_Processada
     global Img_Original
     global Filtro
-    l, c = Img_Original.shape
-    Img_Processada = np.zeros((l, c), np.uint8)
-    center = math.floor(Fsize/2)
-    if(Fsize == 3):
-        for i in range(l-1): #y
-            for j in range(c-1): #x
-               Img_Processada[i][j] = aplicaFiltro3(j, i, center)
-        cv2.imshow('ImageWindow', Img_Processada)
-        cv2.waitKey(0)
+    try:
+        l, c = Img_Original.shape
+        Img_Processada = np.zeros((l, c), np.uint8)
+        center = math.floor(Fsize/2)
+        if(Fsize == 3):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    Img_Processada[i][j] = aplicaFiltro3(j, i, center)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+            Processada[0] = True
+        elif(Fsize == 5):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                  Img_Processada[i][j] = aplicaFiltro3(j, i, center)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+            Processada[0] = True
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro")
 
 def Media():
     global Fsize
@@ -274,22 +347,15 @@ def Media():
     global Img_Original
     global Filtro
     #setup filtro
-    Filtro = np.zeros((3,3), np.float16)
-    Fsize = 3
-    Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/9, 1/9, 1/9
-    Filtro[1][0], Filtro[1][1], Filtro[1][2] = 1/9, 1/9, 1/9
-    Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/9, 1/9, 1/9
-    #cria imagem
-    l, c = Img_Original.shape
-    Img_Processada = np.zeros((l, c), np.uint8)
-    center = math.floor(Fsize/2)
-    #seta imagem
-    for i in range(l-1): #y
-        for j in range(c-1): #x
-            Img_Processada[i][j] = aplicaFiltro3(j, i, center)
-    cv2.imshow('ImageWindow', Img_Processada)
-    cv2.waitKey(0)
-    Processada[0] = True
+    try:
+        Filtro = np.zeros((3,3), np.float16)
+        Fsize = 3
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/9, 1/9, 1/9
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] = 1/9, 1/9, 1/9
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/9, 1/9, 1/9
+        conv()
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro media")
 
 def Ponderada():
     global Fsize
@@ -298,24 +364,18 @@ def Ponderada():
     global Img_Original
     global Filtro
     #setup filtro
-    Filtro = np.zeros((3,3), np.float16)
-    Fsize = 3
-    Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/16, 2/16, 1/16
-    Filtro[1][0], Filtro[1][1], Filtro[1][2] = 2/16, 4/16, 2/16
-    Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/16, 2/16, 1/16
-    #cria imagem
-    l, c = Img_Original.shape
-    Img_Processada = np.zeros((l, c), np.uint8)
-    center = math.floor(Fsize/2)
-    #seta imagem
-    for i in range(l-1): #y
-        for j in range(c-1): #x
-            Img_Processada[i][j] = aplicaFiltro3(j, i, center)
-    cv2.imshow('ImageWindow', Img_Processada)
-    cv2.waitKey(0)
-    Processada[0] = True
+    try:
+        Filtro = np.zeros((3,3), np.float16)
+        Fsize = 3
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/16, 2/16, 1/16
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] = 2/16, 4/16, 2/16
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/16, 2/16, 1/16
+        conv()
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro ponderada")
 
 #histograma
+
 def histograma(Img):
     try:
         cores = np.array(Img)
@@ -386,6 +446,7 @@ def equalizarHistogramaG(Img):
 
 
 #editor de imagem
+
 def initEditWindow():
     global editWind
     editWind = Tk()
@@ -426,11 +487,24 @@ def initContent():
     editMenu.add_command(label="Logaritmo", command=logaritmo)
     editMenu.add_command(label="Gamma", command=correcaoGama)
     editMenu.add_command(label="Limiarizacao", command=limiarizacao)
-    editMenu.add_command(label="Media", command=Media)
-    editMenu.add_command(label="Ponderada", command=Ponderada)
-    editMenu.add_command(label="Convolucao", command=conv)
     editMenu.add_command(label="Editar", command=editar)
 
+    #filtro
+    filtroMenu = Menu(editMenu, tearoff=0)
+    editMenu.add_cascade(label="Filtro", menu=filtroMenu)
+    filtroMenu.add_command(label="Media", command=Media)
+    filtroMenu.add_command(label="Ponderada", command=Ponderada)
+    filtroMenu.add_command(label="Convolucao", command=conv)
+    #cria filtros
+    criafiltroMenu = Menu(filtroMenu, tearoff=0)
+    filtroMenu.add_cascade(label="Cria Filtro", menu=criafiltroMenu)
+    #3x3
+    criafiltroMenu.add_command(label="Cria Filtro 3", command=criaFiltro3)
+    #5x5
+    criafiltroMenu.add_command(label="Cria Filtro 5", command=criaFiltro5)
+    #9x9
+    criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
+    
     #histograma
     histMenu = Menu(editMenu, tearoff=0)
     editMenu.add_cascade(label="Histograma", menu=histMenu)
