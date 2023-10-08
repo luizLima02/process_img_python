@@ -2,6 +2,7 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import math
 import gc
 import tkinter as tk
@@ -14,8 +15,8 @@ from PIL import Image, ImageTk
 
 
 #Globais
-Carregado = [False]
-Processada = [False]
+Carregado = False
+Processada = False
 Img_Original = []
 Img_Processada = []
 Filtro = np.zeros((3,3), np.uint8)
@@ -37,7 +38,6 @@ def initWindow():
     window.config(background="#22c995")
 
 
-
 #funcoes de abrir, salvar e mostrar imagem
 
 def abrirImg():
@@ -52,8 +52,8 @@ def abrirImg():
     #selecione o arquivo
     filepath = filedialog.askopenfilename(title="Abrir Imagem", initialdir="/", filetypes=filetypes)
     if(cv2.haveImageReader(filepath) == True):
-        Img_Original = cv2.imread(filepath, 0)
-        Carregado[0] = True
+        Img_Original = cv2.imread(filepath, 1)
+        Carregado = True
     else:
         mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
 
@@ -65,7 +65,7 @@ def salvarImg():
     #formatos suportados pelo opencv
     filetypes = ['.png', '.bmp', '.dib' , '.jpeg', '.jpg', '.jpe', '.jp2', '.webp', '.avif', '.pbm', '.pgm', '.ppm', '.pxm', '.pnm', '.pfm', '.sr', '.ras' , '.tiff', '.tif', '.exr', '.hdr', '.pic']
     #faz algo se tiver uma imagem carregada
-    if(Carregado[0] == True):
+    if(Carregado == True):
         #seleciona o formato
         formato = dialog.askstring("Input", "Selecione o formato que deseja salvar a Imagem:\n(ex: .png)")
         if(formato.lower() in filetypes):
@@ -74,7 +74,7 @@ def salvarImg():
             nome = dialog.askstring("Input", "Digite como deseja salvar o nome do arquivo")
             nome = nome + (formato.lower())
             os.chdir(filepath)
-            if Processada[0] == False:
+            if Processada == False:
                 cv2.imwrite(nome, Img_Original)
             else:
                 cv2.imwrite(nome, Img_Processada)
@@ -85,7 +85,7 @@ def salvarImg():
 
 def visualizarImgOriginal():
     global Img_Original
-    if Carregado[0]: 
+    if Carregado: 
         try:
             cv2.imshow('ImageWindow', Img_Original)
             cv2.waitKey(0)
@@ -97,7 +97,7 @@ def visualizarImgOriginal():
 def visualizarLadoALado():
     global Img_Original
     global Img_Processada
-    if Processada[0]: 
+    if Processada: 
         try:
             image = np.concatenate((Img_Original, Img_Processada), axis=1)
             cv2.imshow('ImageWindow', image)
@@ -108,13 +108,37 @@ def visualizarLadoALado():
         mesBox.showinfo(title="", message="nenhuma imagem processada")
 
 #primitivas
-
-def getPixel(Img, x, y):
-    l, c = Img_Original.shape
+def getR(Img, x, y):
+    l, c = Img_Original.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
         return 0
     else:
-        return Img[y][x]
+        b, g, r = Img[y][x]
+        return r
+
+def getG(Img, x, y):
+    l, c = Img_Original.shape[:2]
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return 0
+    else:
+        b, g, r = Img[y][x]
+        return g
+
+def getB(Img, x, y):
+    l, c = Img_Original.shape[:2]
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return 0
+    else:
+        b, g, r = Img[y][x]
+        return b
+
+def getPixel(Img, x, y):
+    l, c = Img_Original.shape[:2]
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return (0, 0, 0)
+    else:
+        b, g, r = Img[y][x]
+        return (r, g, b)
 
 def setPixel(Img, x, y, intensidade):
     l, c = Img_Original.shape
@@ -130,36 +154,44 @@ def negativo():
     global Processada
     global Img_Original
     global Img_Processada
-    if Carregado[0]:
-        Processada[0] = True
-        w, h = Img_Original.shape
-        Img_Processada = np.zeros((w, h), np.uint8)
+    if Carregado:
+        Processada = True
+        w, h, c = Img_Original.shape[:3]
+        Img_Processada = np.zeros((w, h, c), np.uint8)
         for i in range(w):
             for j in range(h):
-                Img_Processada[i][j] = (255 - Img_Original[i][j])
+                (b, g, r) = Img_Original[i][j]
+                Img_Processada[i][j] = (255 - b, 255 - g, 255 - r)
         cv2.imshow('ImageWindow', Img_Processada)
         cv2.waitKey(0)
     else:
-        Processada[0] = False
+        Processada = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
 
-def logaritmo():
+def logaritmoRGB():
     global Carregado
     global Processada
     global Img_Original
     global Img_Processada
-    if Carregado[0]:
-        Processada[0] = True
+    if Carregado:
+        Processada = True
         #pede a base do logaritimo
         base = dialog.askstring("Input", "Selecione a base logaritmica a ser utilizada. \nou ln para logaritmo natural(base e)")
         if(base.lower() == "ln"):
             try:
-                w, h = Img_Original.shape
-                Img_Processada = np.float32(Img_Original)
+                w, h, c = Img_Original.shape[:3]
+                Img_Processada = np.zeros((w, h, c), np.float32)
                 for i in range(w):
                     for j in range(h):
-                        if(Img_Original[i][j] != 0):
-                            Img_Processada[i][j] = math.log(Img_Processada[i][j])
+                        b, g, r = Img_Original[i][j]
+                        if(b != 0):
+                            b = math.log(b)
+                        if(g != 0):
+                            g = math.log(g)
+                        if(r != 0):
+                            r = math.log(r)
+
+                        Img_Processada[i][j] = (b, g, r)
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
                 Img_Processada = np.int8(Img_Processada)
@@ -170,12 +202,19 @@ def logaritmo():
         else:
             try:
                 base = int(base)
-                w, h = Img_Original.shape
-                Img_Processada = np.float32(Img_Original)
+                w, h, c = Img_Original.shape[:3]
+                Img_Processada = np.zeros((w, h, c), np.float32)
                 for i in range(w):
                     for j in range(h):
-                        if(Img_Original[i][j] != 0):
-                            Img_Processada[i][j] = math.log(Img_Processada[i][j], base)
+                        b, g, r = Img_Original[i][j]
+                        if(b != 0):
+                            b = math.log(b, base)
+                        if(g != 0):
+                            g = math.log(g, base)
+                        if(r != 0):
+                            r = math.log(r, base)
+
+                        Img_Processada[i][j] = (b, g, r)
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
                 Img_Processada = np.int8(Img_Processada)
@@ -184,57 +223,78 @@ def logaritmo():
             except:
                 mesBox.showinfo(title="", message="erro ao processar imagem")
     else:
-       Processada[0] = False
+       Processada = False
        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
        mesBox.showinfo(title="", message="sem imagem carregada")
 
-def correcaoGama():
+def correcaoGamaRGB():
     global Carregado
     global Processada
     global Img_Original
     global Img_Processada
-    if Carregado[0]:
+    if Carregado:
         try:
-            Processada[0] = True
-            w, h = Img_Original.shape
+            Processada = True
+            w, h, c = Img_Original.shape[:3]
         
             #cria uma imagem normalizada de floats de [0,1]
-            Img_Processada = np.float32(Img_Original/255.0)
+            Img_Processada = np.zeros((w, h, c), np.float32)
             gamma = dialog.askfloat("Input", "Selecione o gama a ser utilizado")
             for i in range(w):
                 for j in range(h):
-                    Img_Processada[i][j] = math.pow(Img_Processada[i][j], gamma)
+                    b, g, r = Img_Original[i][j]
+                    b = b/255.0
+                    g = g/255.0
+                    r = r/255.0
+                    Img_Processada[i][j] = (math.pow(b, gamma), math.pow(g, gamma), math.pow(r, gamma))
 
             #coloca a imagem de [0,255]
-            Img_Processada = Img_Processada * 255
+            for i in range(w):
+                for j in range(h):
+                    b, g, r = Img_Processada[i][j]
+                    b = b*255.0
+                    g = g*255.0
+                    r = r*255.0
+                    Img_Processada[i][j] = (b, g, r)
+            
             #transfoma a imagem em um array de floats novamente
             Img_Processada = np.int8(Img_Processada)
-            print(getPixel(Img_Processada, h-1, w-1))
-            print(Img_Processada[w-1,h-1])
+            #print(getPixel(Img_Processada, h-1, w-1))
+            #print(Img_Processada[w-1,h-1])
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao processar imagem")
     else:
-        Processada[0] = False
+        Processada = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
 
-def limiarizacao():
+def limiarizacaoRGB():
     global Processada
     global Img_Original
     global Img_Processada
-    if Carregado[0]:
+    if Carregado:
         try:
-            Processada[0] = True
+            Processada = True
             limiar = dialog.askinteger("Input", "Selecione o Limiar a ser utilizado")
-            l, c = Img_Original.shape
-            Img_Processada = np.zeros((l, c), np.uint8)
+            l, c, cha = Img_Original.shape[:3]
+            Img_Processada = np.zeros((l, c, cha), np.uint8)
             for i in range(l):
                 for j in range(c):
-                        if(Img_Original[i][j] >= limiar):
-                            Img_Processada[i][j] = 255
-                        else:
-                            Img_Processada[i][j] = 0 
+                        b, g, r = Img_Original[i][j]
+                        if(b >= limiar): 
+                            b = 255 
+                        else: 
+                            b = 0
+                        if(g >= limiar): 
+                            g = 255 
+                        else: 
+                            g = 0
+                        if(r >= limiar): 
+                            r = 255 
+                        else: 
+                            r = 0
+                        Img_Processada[i][j] = (b, g, r)
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
@@ -242,7 +302,7 @@ def limiarizacao():
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
-#Criacao de Filtro
+#Criacao de Filtros
 
 def criaFiltro3():
     global Fsize
@@ -287,56 +347,92 @@ def criaFiltro9():
             except:
                 mesBox.showerror(title="", message="Valor Invalido")
 
-#Aplicacao de Filtros
+#aplicacao de filtros
+def aplicaFiltro3(x, y, c):
+    global Img_Original
+    global Filtro
+    valoresR = [Filtro[c-1][c-1]*getR(Img_Original, x-1, y-1), Filtro[c-1][c]*getR(Img_Original, x, y-1), Filtro[c-1][c+1]*getR(Img_Original, x+1, y-1),
+               Filtro[c][c-1]*getR(Img_Original, x-1, y),     Filtro[c][c]*getR(Img_Original, x, y),     Filtro[c][c+1]*getR(Img_Original, x+1, y),
+               Filtro[c+1][c-1]*getR(Img_Original, x-1, y+1), Filtro[c+1][c]*getR(Img_Original, x, y+1), Filtro[c+1][c+1]*getR(Img_Original, x+1, y+1)]
+    
+    valoresG = [Filtro[c-1][c-1]*getG(Img_Original, x-1, y-1), Filtro[c-1][c]*getG(Img_Original, x, y-1), Filtro[c-1][c+1]*getG(Img_Original, x+1, y-1),
+               Filtro[c][c-1]*getG(Img_Original, x-1, y),     Filtro[c][c]*getG(Img_Original, x, y),     Filtro[c][c+1]*getG(Img_Original, x+1, y),
+               Filtro[c+1][c-1]*getG(Img_Original, x-1, y+1), Filtro[c+1][c]*getG(Img_Original, x, y+1), Filtro[c+1][c+1]*getG(Img_Original, x+1, y+1)]
+    
+    valoresB = [Filtro[c-1][c-1]*getB(Img_Original, x-1, y-1), Filtro[c-1][c]*getB(Img_Original, x, y-1), Filtro[c-1][c+1]*getB(Img_Original, x+1, y-1),
+               Filtro[c][c-1]*getB(Img_Original, x-1, y),     Filtro[c][c]*getB(Img_Original, x, y),     Filtro[c][c+1]*getB(Img_Original, x+1, y),
+               Filtro[c+1][c-1]*getB(Img_Original, x-1, y+1), Filtro[c+1][c]*getB(Img_Original, x, y+1), Filtro[c+1][c+1]*getB(Img_Original, x+1, y+1)]
+    
+    valR = 0
+    valG = 0
+    valB = 0
+    for i in range(9):
+        valR = valR + valoresR[i]
+        valG = valG + valoresG[i]
+        valB = valB + valoresB[i]
+
+    return valB, valG, valR
 
 def aplicaFiltro5(x, y, c):
     global Img_Original
     global Filtro
-    valores = [Filtro[c-2][c-2]*getPixel(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getPixel(Img_Original, x-1, y-2), Filtro[c-2][c]*getPixel(Img_Original, x, y-2), Filtro[c-2][c+1]*getPixel(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getPixel(Img_Original, x+2, y-2), #linha 1
-               Filtro[c-1][c-2]*getPixel(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getPixel(Img_Original, x-1, y-1), Filtro[c-1][c]*getPixel(Img_Original, x, y-1), Filtro[c-1][c+1]*getPixel(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getPixel(Img_Original, x+2, y-1), #linha 2
-               Filtro[c][c-2]*getPixel(Img_Original, x-2, y),     Filtro[c][c-1]*getPixel(Img_Original, x-1, y),     Filtro[c][c]*getPixel(Img_Original, x, y),     Filtro[c][c+1]*getPixel(Img_Original, x+1, y),     Filtro[c][c+2]*getPixel(Img_Original, x+2, y), #linha 3
-               Filtro[c+1][c-2]*getPixel(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getPixel(Img_Original, x-1, y+1), Filtro[c+1][c]*getPixel(Img_Original, x, y+1), Filtro[c+1][c+1]*getPixel(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getPixel(Img_Original, x+2, y+1), #linha 4
-               Filtro[c+2][c-2]*getPixel(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getPixel(Img_Original, x-1, y+2), Filtro[c+2][c]*getPixel(Img_Original, x, y+2), Filtro[c+2][c+1]*getPixel(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getPixel(Img_Original, x+2, y+2), #linha 5
+    valoresR = [Filtro[c-2][c-2]*getR(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getR(Img_Original, x-1, y-2), Filtro[c-2][c]*getR(Img_Original, x, y-2), Filtro[c-2][c+1]*getR(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getR(Img_Original, x+2, y-2), #linha 1
+               Filtro[c-1][c-2]*getR(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getR(Img_Original, x-1, y-1), Filtro[c-1][c]*getR(Img_Original, x, y-1), Filtro[c-1][c+1]*getR(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getR(Img_Original, x+2, y-1), #linha 2
+               Filtro[c][c-2]*getR(Img_Original, x-2, y),     Filtro[c][c-1]*getR(Img_Original, x-1, y),     Filtro[c][c]*getR(Img_Original, x, y),     Filtro[c][c+1]*getR(Img_Original, x+1, y),     Filtro[c][c+2]*getR(Img_Original, x+2, y), #linha 3
+               Filtro[c+1][c-2]*getR(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getR(Img_Original, x-1, y+1), Filtro[c+1][c]*getR(Img_Original, x, y+1), Filtro[c+1][c+1]*getR(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getR(Img_Original, x+2, y+1), #linha 4
+               Filtro[c+2][c-2]*getR(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getR(Img_Original, x-1, y+2), Filtro[c+2][c]*getR(Img_Original, x, y+2), Filtro[c+2][c+1]*getR(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getR(Img_Original, x+2, y+2), #linha 5
               ]
-    val = 0
+    
+    valoresG = [Filtro[c-2][c-2]*getG(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getG(Img_Original, x-1, y-2), Filtro[c-2][c]*getG(Img_Original, x, y-2), Filtro[c-2][c+1]*getG(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getG(Img_Original, x+2, y-2), #linha 1
+               Filtro[c-1][c-2]*getG(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getG(Img_Original, x-1, y-1), Filtro[c-1][c]*getG(Img_Original, x, y-1), Filtro[c-1][c+1]*getG(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getG(Img_Original, x+2, y-1), #linha 2
+               Filtro[c][c-2]*getG(Img_Original, x-2, y),     Filtro[c][c-1]*getG(Img_Original, x-1, y),     Filtro[c][c]*getG(Img_Original, x, y),     Filtro[c][c+1]*getG(Img_Original, x+1, y),     Filtro[c][c+2]*getG(Img_Original, x+2, y), #linha 3
+               Filtro[c+1][c-2]*getG(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getG(Img_Original, x-1, y+1), Filtro[c+1][c]*getG(Img_Original, x, y+1), Filtro[c+1][c+1]*getG(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getG(Img_Original, x+2, y+1), #linha 4
+               Filtro[c+2][c-2]*getG(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getG(Img_Original, x-1, y+2), Filtro[c+2][c]*getG(Img_Original, x, y+2), Filtro[c+2][c+1]*getG(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getG(Img_Original, x+2, y+2), #linha 5
+              ]
+    
+    valoresB = [Filtro[c-2][c-2]*getB(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getB(Img_Original, x-1, y-2), Filtro[c-2][c]*getB(Img_Original, x, y-2), Filtro[c-2][c+1]*getB(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getB(Img_Original, x+2, y-2), #linha 1
+               Filtro[c-1][c-2]*getB(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getB(Img_Original, x-1, y-1), Filtro[c-1][c]*getB(Img_Original, x, y-1), Filtro[c-1][c+1]*getB(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getB(Img_Original, x+2, y-1), #linha 2
+               Filtro[c][c-2]*getB(Img_Original, x-2, y),     Filtro[c][c-1]*getB(Img_Original, x-1, y),     Filtro[c][c]*getB(Img_Original, x, y),     Filtro[c][c+1]*getB(Img_Original, x+1, y),     Filtro[c][c+2]*getB(Img_Original, x+2, y), #linha 3
+               Filtro[c+1][c-2]*getB(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getB(Img_Original, x-1, y+1), Filtro[c+1][c]*getB(Img_Original, x, y+1), Filtro[c+1][c+1]*getB(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getB(Img_Original, x+2, y+1), #linha 4
+               Filtro[c+2][c-2]*getB(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getB(Img_Original, x-1, y+2), Filtro[c+2][c]*getB(Img_Original, x, y+2), Filtro[c+2][c+1]*getB(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getB(Img_Original, x+2, y+2), #linha 5
+              ]
+    valR = 0
+    valG = 0
+    valB = 0
     for i in range(25):
-        val = val + valores[i]
-    return val
+        valR = valR + valoresR[i]
+        valG = valG + valoresG[i]
+        valB = valB + valoresB[i]
+    return valB, valG, valR
 
-def aplicaFiltro3(x, y, c):
-    global Img_Original
-    global Filtro
-    valores = [Filtro[c-1][c-1]*getPixel(Img_Original, x-1, y-1), Filtro[c-1][c]*getPixel(Img_Original, x, y-1), Filtro[c-1][c+1]*getPixel(Img_Original, x+1, y-1),
-               Filtro[c][c-1]*getPixel(Img_Original, x-1, y),     Filtro[c][c]*getPixel(Img_Original, x, y),     Filtro[c][c+1]*getPixel(Img_Original, x+1, y),
-               Filtro[c+1][c-1]*getPixel(Img_Original, x-1, y+1), Filtro[c+1][c]*getPixel(Img_Original, x, y+1), Filtro[c+1][c+1]*getPixel(Img_Original, x+1, y+1)]
-    val = 0
-    for i in range(9):
-        val = val + valores[i]
-    return val
+#convolucao
 
-def conv():
+def convRGB():
     global Fsize
+    global Processada
     global Img_Processada
     global Img_Original
     global Filtro
     try:
-        l, c = Img_Original.shape
-        Img_Processada = np.zeros((l, c), np.uint8)
+        l, c, cha = Img_Original.shape[:3]
+        Img_Processada = np.zeros((l, c, cha), np.uint8)
         center = math.floor(Fsize/2)
         if(Fsize == 3):
             for i in range(l-1): #y
                 for j in range(c-1): #x
-                    Img_Processada[i][j] = aplicaFiltro3(j, i, center)
+                    (b, g, r) = aplicaFiltro3(j, i, center)
+                    Img_Processada[i][j] = (b, g, r)
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
-            Processada[0] = True
+            Processada = True
         elif(Fsize == 5):
             for i in range(l-1): #y
                 for j in range(c-1): #x
-                  Img_Processada[i][j] = aplicaFiltro3(j, i, center)
+                    (b, g, r) = aplicaFiltro5(j, i, center)
+                    Img_Processada[i][j] =  (b, g, r)
             cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
-            Processada[0] = True
+            Processada = True
     except:
         mesBox.showerror(title="", message="erro ao aplicar filtro")
 
@@ -353,9 +449,9 @@ def Media():
         Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/9, 1/9, 1/9
         Filtro[1][0], Filtro[1][1], Filtro[1][2] = 1/9, 1/9, 1/9
         Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/9, 1/9, 1/9
-        conv()
+        convRGB()
     except:
-        mesBox.showerror(title="", message="erro ao aplicar filtro media")
+       mesBox.showerror(title="", message="erro ao aplicar filtro media")
 
 def Ponderada():
     global Fsize
@@ -370,74 +466,232 @@ def Ponderada():
         Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/16, 2/16, 1/16
         Filtro[1][0], Filtro[1][1], Filtro[1][2] = 2/16, 4/16, 2/16
         Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/16, 2/16, 1/16
-        conv()
+        convRGB()
     except:
         mesBox.showerror(title="", message="erro ao aplicar filtro ponderada")
 
-#histograma
+################ Histograma #####################
 
-def histograma(Img):
-    try:
-        cores = np.array(Img)
-        cores = cores.flatten()
-        # Cria o histograma
-        plt.hist(cores, bins=256, range=(0,256), color='black')
-        # Mostra o histograma
+#faz os arrays de cor 
+
+def MakeRed(img):
+    l, c = img.shape[:2]
+    redArray = np.zeros((l*c), np.uint8)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = img[i][j]
+            redArray[i*c + j] = r
+
+    return redArray
+
+def MakeGreen(img):
+    l, c = img.shape[:2]
+    greenArray = np.zeros((l*c), np.uint8)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = img[i][j]
+            greenArray[i*c + j] = g
+
+    return greenArray
+
+def MakeBlue(img):
+    l, c = img.shape[:2]
+    blueArray = np.zeros((l*c), np.uint8)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = img[i][j]
+            blueArray[i*c + j] = b
+
+    return blueArray
+
+#cria histograma
+def Histograma(img, cor):
+    corA = []
+    if cor.lower() == "r":
+        corA = MakeRed(img)
+        plt.hist(corA, bins=256, range=(0,256), color='red')
         plt.show()
+
+    elif cor.lower() == "g":
+        corA = MakeGreen(img)
+        plt.hist(corA, bins=256, range=(0,256), color='green')
+        plt.show()
+
+    elif cor.lower() == "b":
+        corA = MakeBlue(img)
+        plt.hist(corA, bins=256, range=(0,256), color='blue')
+        plt.show()
+    
+    else:
+        redData   = pd.DataFrame(dict(Red=np.array(MakeRed(img))))
+        greenData = pd.DataFrame(dict(Green=np.array(MakeGreen(img))))
+        blueData  = pd.DataFrame(dict(Blue=np.array(MakeBlue(img))))
+
+        fig, axes = plt.subplots(1, 3)
+
+        redData.hist('Red',     bins=256, range=(0,256), color='red',   ax=axes[0])
+        greenData.hist('Green', bins=256, range=(0,256), color='green', ax=axes[1])
+        blueData.hist('Blue',   bins=256, range=(0,256), color='blue',  ax=axes[2])
+
+        plt.show()
+
+#mostrar histograma
+def ShowHistogramOR():
+    try:
+        Histograma(Img_Original, "R")
     except:
-        mesBox.showinfo(title="", message="erro ao montar histograma")
+        mesBox.showerror("Error", "Erro ao plotar histograma")
 
-def showHistogramaOrigin():
-    global Img_Original
-    if Carregado[0]:
-        histograma(Img_Original)
-       
-    else:
-        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
-        
+def ShowHistogramOG():
+    try:
+        Histograma(Img_Original, "G")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
 
-def showHistogramaProcess():
-    global Img_Processada
-    if Processada[0]:
-        histograma(Img_Processada)
-    else:
-        mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
+def ShowHistogramOB():
+    try:
+        Histograma(Img_Original, "B")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
 
+def ShowHistogramORGB():
+    try:
+        Histograma(Img_Original, "RGB")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
 
-def equalizar():
-    global Carregado
-    global Processada
-    global Img_Original
-    if Carregado[0]:
-        equalizarHistogramaG(Img_Original)
-    else:
-        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+def ShowHistogramPR():
+    try:
+        Histograma(Img_Processada, "R")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
 
-def equalizarHistogramaG(Img):
+def ShowHistogramPG():
+    try:
+        Histograma(Img_Processada, "G")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
+
+def ShowHistogramPB():
+    try:
+        Histograma(Img_Processada, "B")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
+
+def ShowHistogramPRGB():
+    try:
+        Histograma(Img_Processada, "RGB")
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
+
+#equalizar histogramas
+def equalizarHistogramaRGB(Img, pros):
     try:
         global Carregado
         global Processada
         global Img_Original
         global Img_Processada
-        Processada[0] = True
-        cores = np.array(Img)
-        cores = cores.flatten()
-        Img_Processada = Img_Original * 1
-        hist = np.zeros(256)
-        for i in range(len(cores)):
-            hist[cores[i]] = hist[cores[i]] + 1 
-        histCulm = np.zeros(256)
-        acumulador = 0
-        for i in range(len(hist)):
-            acumulador = acumulador + hist[i]
-            histCulm[i] = acumulador
-        for i in range(len(histCulm)):
-            histCulm[i] = int((histCulm[i]/len(cores))*255)
+        Processada = True
 
-        w, h = Img_Processada.shape
+        corR = MakeRed(Img)
+        corG = MakeGreen(Img)
+        corB = MakeBlue(Img)
+        
+        if(pros == False):
+            Img_Processada = Img_Original * 1
+
+        histR = np.zeros(256)
+        histG = np.zeros(256)
+        histB = np.zeros(256)
+
+        for i in range(len(corR)):
+            histR[corR[i]] = histR[corR[i]] + 1
+            histG[corG[i]] = histG[corG[i]] + 1
+            histB[corB[i]] = histB[corB[i]] + 1
+
+        histCulmR = np.zeros(256)
+        histCulmG = np.zeros(256)
+        histCulmB = np.zeros(256)
+
+        acumuladorR = 0
+        acumuladorG = 0
+        acumuladorB = 0
+
+        for i in range(len(histR)):
+            acumuladorR = acumuladorR + histR[i]
+            acumuladorG = acumuladorG + histG[i]
+            acumuladorB = acumuladorB + histB[i]
+
+            histCulmR[i] = acumuladorR
+            histCulmG[i] = acumuladorG
+            histCulmB[i] = acumuladorB
+
+        for i in range(len(histCulmR)):
+            histCulmR[i] = int((histCulmR[i]/len(corR))*255)
+            histCulmG[i] = int((histCulmG[i]/len(corG))*255)
+            histCulmB[i] = int((histCulmB[i]/len(corB))*255)
+
+        w, h, ch = Img_Processada.shape[:3]
         for i in range(w):
             for j in range(h):
-                Img_Processada[i][j] = histCulm[Img_Processada[i][j]]
+                (b, g, r) = Img_Processada[i][j]
+                Img_Processada[i][j] = (histCulmB[b], histCulmG[g], histCulmR[r])
+        
+        cv2.imshow("Equalizada",Img_Processada)
+        cv2.waitKey(0)
+    except:
+        mesBox.showinfo(title="", message="erro ao processar imagem")
+
+def equalizarHistograma(Img, Color, pros):
+    try:
+        global Carregado
+        global Processada
+        global Img_Original
+        global Img_Processada
+        Processada = True
+
+        cor = []
+        if(Color == "R"):
+            cor = MakeRed(Img)
+        elif(Color == "G"):
+            cor = MakeGreen(Img)
+        elif(Color == "B"):
+            cor = MakeBlue(Img)
+        
+        if(pros == False):
+            Img_Processada = Img_Original * 1
+
+        hist = np.zeros(256)
+
+        for i in range(len(cor)):
+            hist[cor[i]] = hist[cor[i]] + 1
+  
+        histCulm = np.zeros(256)
+
+        acumulador = 0
+
+        for i in range(len(hist)):
+            acumulador = acumulador + hist[i]
+
+            histCulm[i] = acumulador
+
+        for i in range(len(histCulm)):
+            histCulm[i] = int((histCulm[i]/len(cor))*255)
+           
+
+        w, h, ch = Img_Processada.shape[:3]
+        for i in range(w):
+            for j in range(h):
+                (b, g, r) = Img_Processada[i][j]
+
+                if(Color == "R"):
+                    r = histCulm[r]
+                elif(Color == "G"):
+                    g = histCulm[g]
+                elif(Color == "B"):
+                    b = histCulm[b]
+                
+                Img_Processada[i][j] = (b, g, r)
         
         cv2.imshow("Equalizada",Img_Processada)
         cv2.waitKey(0)
@@ -445,24 +699,46 @@ def equalizarHistogramaG(Img):
         mesBox.showinfo(title="", message="erro ao processar imagem")
 
 
-#editor de imagem
+def equalizarOriginalRGB():
+    equalizarHistogramaRGB(Img_Original, False)
 
-def initEditWindow():
-    global editWind
-    editWind = Tk()
-    editWind.resizable(False, False)
-    editWind.geometry('1250x600')
-    editWind.title("editor de img")
-    editWind.config(background="#ffffff")
-    editing_frame = tk.Frame(editWind, width=200, height=600, bg="Black")
-    editing_frame.pack(side="left", fill="y")
-    
-def editar():
-    global editWind
-    initEditWindow()
-    editWind.mainloop()
+def equalizarOriginalR():
+    equalizarHistograma(Img_Original, "R", False)
+
+def equalizarOriginalG():
+    equalizarHistograma(Img_Original, "G", False)
+
+def equalizarOriginalB():
+    equalizarHistograma(Img_Original, "B", False)
+
+###############################################
+
+def equalizarProcessadaRGB():
+    equalizarHistogramaRGB(Img_Processada, True)
+
+def equalizarProcessadaR():
+    equalizarHistograma(Img_Processada, "R", True)
+
+def equalizarProcessadaG():
+    equalizarHistograma(Img_Processada, "G", True)
+
+def equalizarProcessadaB():
+    equalizarHistograma(Img_Processada, "B", True)
 
 #conteudo
+
+def switch():
+    global Carregado
+    global Processada
+    global Img_Original
+    global Img_Processada
+    if(Carregado and Processada):
+        w, h, c = Img_Original.shape[:3]
+        temp = np.zeros((w,h,c), np.uint8)
+        temp = Img_Original * 1
+        Img_Original = Img_Processada*1
+        Img_Processada = temp * 1
+
 def initContent():
     #barra do menu
     barraMenu = Menu(window)
@@ -473,6 +749,7 @@ def initContent():
 
     fileMenu.add_command(label="Open Image", command=abrirImg)
     fileMenu.add_command(label="Save Image", command=salvarImg)
+    fileMenu.add_command(label="Switch Images", command=switch)
     fileMenu.add_separator()
     fileMenu.add_command(label="Exit", command=window.destroy)
 
@@ -484,17 +761,19 @@ def initContent():
     editMenu = Menu(barraMenu, tearoff=0)
     barraMenu.add_cascade(label="Edit",menu=editMenu)
     editMenu.add_command(label="Negativo", command=negativo)
-    editMenu.add_command(label="Logaritmo", command=logaritmo)
-    editMenu.add_command(label="Gamma", command=correcaoGama)
-    editMenu.add_command(label="Limiarizacao", command=limiarizacao)
-    editMenu.add_command(label="Editar", command=editar)
+    #RGB
+    editMenu.add_command(label="Logaritmo", command=logaritmoRGB)
+    editMenu.add_command(label="Gamma", command=correcaoGamaRGB)
+    editMenu.add_command(label="Limiarizacao", command=limiarizacaoRGB)
+
+    #editMenu.add_command(label="Editar", command=editar)
 
     #filtro
     filtroMenu = Menu(editMenu, tearoff=0)
-    editMenu.add_cascade(label="Filtro", menu=filtroMenu)
+    barraMenu.add_cascade(label="Filtro", menu=filtroMenu)
     filtroMenu.add_command(label="Media", command=Media)
     filtroMenu.add_command(label="Ponderada", command=Ponderada)
-    filtroMenu.add_command(label="Convolucao", command=conv)
+    filtroMenu.add_command(label="Convolucao", command=convRGB)
     #cria filtros
     criafiltroMenu = Menu(filtroMenu, tearoff=0)
     filtroMenu.add_cascade(label="Cria Filtro", menu=criafiltroMenu)
@@ -503,14 +782,32 @@ def initContent():
     #5x5
     criafiltroMenu.add_command(label="Cria Filtro 5", command=criaFiltro5)
     #9x9
-    criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
+    #criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
     
     #histograma
     histMenu = Menu(editMenu, tearoff=0)
     editMenu.add_cascade(label="Histograma", menu=histMenu)
-    histMenu.add_command(label="histograma Original", command=showHistogramaOrigin)
-    histMenu.add_command(label="histograma Process", command=showHistogramaProcess)
-    histMenu.add_command(label="equalizar", command=equalizar)
+    histMenu.add_command(label="Histograma Original canal R", command=ShowHistogramOR)
+    histMenu.add_command(label="Histograma Original canal G", command=ShowHistogramOG)
+    histMenu.add_command(label="Histograma Original canal B", command=ShowHistogramOB)
+    histMenu.add_command(label="Histograma Original canal RGB", command=ShowHistogramORGB)
+    histMenu.add_separator()
+    #HISTOGRAMA IMAGEM PROCESSADA
+    histMenu.add_command(label="Histograma Processada canal R", command=ShowHistogramPR)
+    histMenu.add_command(label="Histograma Processada canal G", command=ShowHistogramPG)
+    histMenu.add_command(label="Histograma Processada canal B", command=ShowHistogramPB)
+    histMenu.add_command(label="Histograma Processada canal RGB", command=ShowHistogramPRGB)
+    histMenu.add_separator()
+    #equalizar
+    histMenu.add_command(label="Equalizar Original R", command=equalizarOriginalR)
+    histMenu.add_command(label="Equalizar Original G", command=equalizarOriginalG)
+    histMenu.add_command(label="Equalizar Original B", command=equalizarOriginalB)
+    histMenu.add_command(label="Equalizar Original RGB", command=equalizarOriginalRGB)
+    histMenu.add_separator()
+    histMenu.add_command(label="Equalizar Processada R", command=equalizarProcessadaR)
+    histMenu.add_command(label="Equalizar Processada G", command=equalizarProcessadaG)
+    histMenu.add_command(label="Equalizar Processada B", command=equalizarProcessadaB)
+    histMenu.add_command(label="Equalizar Processada RGB", command=equalizarProcessadaRGB)
 
 
 
