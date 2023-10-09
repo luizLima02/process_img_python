@@ -12,8 +12,11 @@ Filtragem pela mediana. Obs.: Deve ser possível o usuário escolher o tamanho d
 (Obs.: a aplicação dos filtros por convolução gera matrizes com uma faixa de valores que vão desde números negativos a números maiores do que 255, dependendo do filtro. Quando o objetivo for a simples exibição da imagem com filtro aplicado, você deve normalizar os valores, de tal forma que a imagem resultante ficará com um tom acinzentado).
 ---------------------------------------------------------
 Aguçamento (nitidez) por Laplaciano e High-Boost.
+
 Filtros de Sobel – x e y separados (o resultado da aplicação de cada filtro deve ser normalizado, isto é, as imagens esperadas devem ficar em tons “acinzentados”); 
 Detecção não linear de bordas pelo gradiente (magnitude).
+
+
 ------------------------------------------------------------
 Implementações para o trabalho 1: Cálculo da Transformada Discreta de Fourier (opcional: implementar a própria Transformada Rápida de Fourier), 
 exibição do espectro (deslocado) com possibilidade de edição por parte do usuário (ferramenta de desenho que permita riscar com pontos pretos e brancos a imagem do espectro ou pontos em escala de cinza - “pincel suave”) 

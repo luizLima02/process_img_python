@@ -302,6 +302,54 @@ def limiarizacaoRGB():
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
+def GrayScale():
+    global Processada
+    global Img_Original
+    global Img_Processada
+    if Carregado:
+        try:
+            Processada = True
+            l, c, cha = Img_Original.shape[:3]
+            Img_Original = np.float32(Img_Original)
+            Img_Processada = np.zeros((l, c, cha), np.uint8)
+            for i in range(l):
+                for j in range(c):
+                        (b, g, r) = Img_Original[i][j]
+                        valor = r+g+b 
+                        valor = valor / 3
+                        Img_Processada[i][j] = (valor, valor, valor)
+            Img_Original = np.uint8(Img_Original)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+    else:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+
+def GrayScaleAprim():
+    global Processada
+    global Img_Original
+    global Img_Processada
+    if Carregado:
+        try:  #RED*0,3 + GREEN*0,59 + BLUE*0,11
+            Processada = True
+            l, c, cha = Img_Original.shape[:3]
+            Img_Original = np.float32(Img_Original)
+            Img_Processada = np.zeros((l, c, cha), np.uint8)
+            for i in range(l):
+                for j in range(c):
+                        (b, g, r) = Img_Original[i][j]
+                        valor = r*0.3 + g*0.59 + b*0.11
+                        valor = valor / 3
+                        Img_Processada[i][j] = (valor, valor, valor)
+            Img_Original = np.uint8(Img_Original)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+    else:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+
 #Criacao de Filtros
 
 def criaFiltro3():
@@ -765,7 +813,8 @@ def initContent():
     editMenu.add_command(label="Logaritmo", command=logaritmoRGB)
     editMenu.add_command(label="Gamma", command=correcaoGamaRGB)
     editMenu.add_command(label="Limiarizacao", command=limiarizacaoRGB)
-
+    editMenu.add_command(label="Gray Simple", command=GrayScale)
+    editMenu.add_command(label="Gray Ponderada", command=GrayScaleAprim)
     #editMenu.add_command(label="Editar", command=editar)
 
     #filtro
