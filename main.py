@@ -75,13 +75,99 @@ def salvarImg():
             nome = nome + (formato.lower())
             os.chdir(filepath)
             if Processada == False:
+                if(CheckDouble(Img_Original)):
+                    Img_Original = Img_Original * 255
                 cv2.imwrite(nome, Img_Original)
             else:
+                if(CheckDouble(Img_Processada)):
+                    Img_Processada = Img_Processada * 255
                 cv2.imwrite(nome, Img_Processada)
         else:
             mesBox.showerror(title="erro de tipo", message="Formato nao suportado. \nPorfavor escolha um válido")     
     else:
         mesBox.showinfo(title="", message="nenhuma imagem carregada")
+
+def CheckDouble(Img):
+    try:
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                if(r > 0.0 and r < 1.0) or (g > 0.0 and g < 1.0) or (b > 0.0 and b < 1.0):
+                    return True
+        return False
+    except:
+        mesBox.showinfo(title="", message="erro ao checkar double")
+        return False
+
+def CheckNegative(Img):
+    try:
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                if(r < 0.0):
+                    return 1 
+                elif(g < 0.0): 
+                    return 2
+                elif (b < 0.0):
+                    return 3
+        return 0
+    except:
+        mesBox.showinfo(title="", message="erro ao achar o negativo")
+        return 0
+
+def getMin(Img, channel):
+    try:
+        (minb, ming, minr) = Img[0][0]
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                if(minr > r):
+                    minr = r
+                if(ming > g): 
+                    ming = g
+                if (minb > b):
+                    minb = b
+        if(channel == 1):
+            return minr
+        elif(channel == 2): 
+            return ming  
+        elif (channel == 3):
+            return minb
+        else:
+            return 0
+    except:
+        mesBox.showinfo(title="", message="erro ao pegar o minimo")
+        return 0
+
+    
+def addImg(Img, val):
+    try:
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                Img[i][j] = (b+val, g+val, r+val)
+    except:
+        mesBox.showinfo(title="", message="Erro ao somar imagem")
+
+
+def convertImg(ImgS):
+    Img = ImgS * 1
+    if(CheckNegative(Img) == 1):
+        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+    if(CheckNegative(Img) == 2):
+        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+    if(CheckNegative(Img) == 3):
+        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+
+    if(Img.max() > 1.0):
+        Img = Img / Img.max()
+
+    return Img
+
 
 def visualizarImgOriginal():
     global Img_Original
@@ -94,12 +180,15 @@ def visualizarImgOriginal():
     else:
         mesBox.showinfo(title="", message="nenhuma imagem carregada")
 
+
 def visualizarLadoALado():
     global Img_Original
     global Img_Processada
     if Processada: 
         try:
-            image = np.concatenate((Img_Original, Img_Processada), axis=1)
+            Img_Original = np.float32(Img_Original)
+            Img_Original = Img_Original / Img_Original.max()
+            image = np.concatenate((Img_Original, convertImg(Img_Processada)), axis=1)
             cv2.imshow('ImageWindow', image)
             cv2.waitKey(0)
         except:
@@ -350,6 +439,37 @@ def GrayScaleAprim():
     else:
         mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
+def Sepia():
+    global Processada
+    global Img_Original
+    global Img_Processada
+    if Carregado:
+        try:
+            Processada = True
+            l, c, cha = Img_Original.shape[:3]
+            Img_Original = np.float32(Img_Original)
+            Img_Processada = np.zeros((l, c, cha), np.uint8)
+            for i in range(l):
+                for j in range(c):
+                        (b, g, r) = Img_Original[i][j]
+                        valr = int(r*0.393 +g*0.769 +b*0.189)
+                        valg = int(r*0.349 +g*0.686 +b*0.168) 
+                        valb = int(r*0.272 +g*0.534 +b*0.131) 
+                        if valr > 255:
+                            valr = 255
+                        if valg > 255:
+                            valg = 255
+                        if valb > 255:
+                            valb = 255
+                        Img_Processada[i][j] = (valb, valg, valr)
+            Img_Original = np.uint8(Img_Original)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+    else:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+
 #Criacao de Filtros
 
 def criaFiltro3():
@@ -365,7 +485,6 @@ def criaFiltro3():
                 Filtro[i][j] = num
             except:
                 mesBox.showerror(title="", message="Valor Invalido")
-
 
 def criaFiltro5():
     global Fsize
@@ -463,14 +582,14 @@ def convRGB():
     global Filtro
     try:
         l, c, cha = Img_Original.shape[:3]
-        Img_Processada = np.zeros((l, c, cha), np.uint8)
+        Img_Processada = np.zeros((l, c, cha), np.float32)
         center = math.floor(Fsize/2)
         if(Fsize == 3):
             for i in range(l-1): #y
                 for j in range(c-1): #x
                     (b, g, r) = aplicaFiltro3(j, i, center)
                     Img_Processada[i][j] = (b, g, r)
-            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
             cv2.waitKey(0)
             Processada = True
         elif(Fsize == 5):
@@ -478,7 +597,7 @@ def convRGB():
                 for j in range(c-1): #x
                     (b, g, r) = aplicaFiltro5(j, i, center)
                     Img_Processada[i][j] =  (b, g, r)
-            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
             cv2.waitKey(0)
             Processada = True
     except:
@@ -518,6 +637,22 @@ def Ponderada():
     except:
         mesBox.showerror(title="", message="erro ao aplicar filtro ponderada")
 
+def Laplaciano():
+    global Fsize
+    global Processada
+    global Img_Processada
+    global Img_Original
+    global Filtro
+    #setup filtro
+    try:
+        Filtro = np.zeros((3,3), np.float16)
+        Fsize = 3
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] =  0, -1,  0
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] = -1,  4, -1 
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] =  0, -1,  0
+        convRGB()
+    except:
+       mesBox.showerror(title="", message="erro o Laplaciano")
 ################ Histograma #####################
 
 #faz os arrays de cor 
@@ -815,6 +950,7 @@ def initContent():
     editMenu.add_command(label="Limiarizacao", command=limiarizacaoRGB)
     editMenu.add_command(label="Gray Simple", command=GrayScale)
     editMenu.add_command(label="Gray Ponderada", command=GrayScaleAprim)
+    editMenu.add_command(label="Sepia", command=Sepia)
     #editMenu.add_command(label="Editar", command=editar)
 
     #filtro
@@ -823,6 +959,7 @@ def initContent():
     filtroMenu.add_command(label="Media", command=Media)
     filtroMenu.add_command(label="Ponderada", command=Ponderada)
     filtroMenu.add_command(label="Convolucao", command=convRGB)
+    filtroMenu.add_command(label="Laplaciano", command=Laplaciano)
     #cria filtros
     criafiltroMenu = Menu(filtroMenu, tearoff=0)
     filtroMenu.add_cascade(label="Cria Filtro", menu=criafiltroMenu)
@@ -859,9 +996,9 @@ def initContent():
     histMenu.add_command(label="Equalizar Processada RGB", command=equalizarProcessadaRGB)
 
 
-
 if __name__ == "__main__":
     initWindow()
     initContent()
     window.mainloop()
+   
         
