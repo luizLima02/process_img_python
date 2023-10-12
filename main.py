@@ -194,6 +194,16 @@ def visualizarImgOriginal():
     else:
         mesBox.showinfo(title="", message="nenhuma imagem carregada")
 
+def visualizarImgProcess():
+    global Img_Processada
+    if Processada: 
+        try:
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.waitKey(0)
+        except:
+            mesBox.showinfo(title="", message="erro ao mostrar imagem")
+    else:
+        mesBox.showinfo(title="", message="nenhuma imagem carregada")
 
 def visualizarLadoALado():
     global Img_Original
@@ -210,7 +220,7 @@ def visualizarLadoALado():
 
 #primitivas
 def getR(Img, x, y):
-    l, c = Img_Original.shape[:2]
+    l, c = Img.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
         return 0
     else:
@@ -218,7 +228,7 @@ def getR(Img, x, y):
         return r
 
 def getG(Img, x, y):
-    l, c = Img_Original.shape[:2]
+    l, c = Img.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
         return 0
     else:
@@ -226,7 +236,7 @@ def getG(Img, x, y):
         return g
 
 def getB(Img, x, y):
-    l, c = Img_Original.shape[:2]
+    l, c = Img.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
         return 0
     else:
@@ -234,12 +244,12 @@ def getB(Img, x, y):
         return b
 
 def getPixel(Img, x, y):
-    l, c = Img_Original.shape[:2]
+    l, c = Img.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
-        return (0, 0, 0)
+        return 0, 0, 0
     else:
         b, g, r = Img[y][x]
-        return (r, g, b)
+        return b, g, r
 
 def setPixel(Img, x, y, intensidade):
     l, c = Img_Original.shape
@@ -291,7 +301,7 @@ def getRGB(h, s, v):
 
     m = v - Cc
 
-    return (round((r1+m)*255), round((g1+m)*255), round((b1+m)*255))
+    return round((r1+m)*255), round((g1+m)*255), round((b1+m)*255)
 
 
 #processos basicos
@@ -967,8 +977,90 @@ def equalizarProcessadaG():
 def equalizarProcessadaB():
     equalizarHistograma(Img_Processada, "B", True)
 
-#conteudo
+#transfomacoes
+def pontoRotacionado(x, y, ang):
+    xR = (x*math.cos(math.radians(ang))) - (y*math.sin(math.radians(ang)))
+    yR = (x*math.sin(math.radians(ang))) + (y*math.cos(math.radians(ang)))
+    return xR, yR
 
+def interpolar(img, x, y):
+    # Obtenha os índices dos quatro cantos
+    x1 = x
+    y1 = y
+    x2 = x1 + 1
+    y2 = y1 + 1
+
+    
+    # se for a ultima coluna repita os valores
+    l, c, cha = img.shape[:3]
+    if x2 > c or y2 > l:
+        return getPixel(img, x1, y1)
+
+    # Calcule os pesos para cada canto
+    q11b, q11g, q11r = getPixel(img, x1, y1)
+    q21b, q21g, q21r = getPixel(img, x2, y1)
+    q12b, q12g, q12r = getPixel(img, x1, y2)
+    q22b, q22g, q22r = getPixel(img, x2, y2)
+
+    # Interpolação bilinear
+    valor_interpoladoR = q11r * (x2 - x) * (y2 - y) + \
+                        q21r * (x - x1) * (y2 - y) + \
+                        q12r * (x2 - x) * (y - y1) + \
+                        q22r * (x - x1) * (y - y1)
+
+    valor_interpoladoG = q11g * (x2 - x) * (y2 - y) + \
+                        q21g * (x - x1) * (y2 - y) + \
+                        q12g * (x2 - x) * (y - y1) + \
+                        q22g * (x - x1) * (y - y1)
+    
+    valor_interpoladoB = q11b * (x2 - x) * (y2 - y) + \
+                        q21b * (x - x1) * (y2 - y) + \
+                        q12b * (x2 - x) * (y - y1) + \
+                        q22b * (x - x1) * (y - y1)
+    
+    return valor_interpoladoB, valor_interpoladoG, valor_interpoladoR
+
+
+def ScaleNear(scaleSize, img):
+    l, c, cha = img.shape[:3]
+    ln = l*round(scaleSize)
+    cn = c*round(scaleSize)
+    ImagemScalada = np.zeros((ln,cn, cha), np.float32)
+    for i in range(ln):
+        for j in range(cn):
+            (b, g, r) = getPixel(img, round(j/round(scaleSize)), round(i/round(scaleSize)))
+            ImagemScalada[i][j] = (b, g, r)
+    return ImagemScalada
+
+def ScaleLinear(scaleSize, img):
+    l, c, cha = img.shape[:3]
+    ln = l*round(scaleSize)
+    cn = c*round(scaleSize)
+    ImagemScalada = np.zeros((ln,cn, cha), np.float32)
+    for i in range(ln):
+        for j in range(cn):
+            (b, g, r) = interpolar(img, round(j/round(scaleSize)), round(i/round(scaleSize)))
+            ImagemScalada[i][j] = (b, g, r)
+    return ImagemScalada
+
+def Escalar():
+    global Img_Original
+    global Img_Processada
+    global Processada
+    global Carregado
+    try:
+        tipo = dialog.askstring("Input", "digite o tipo de escala a ser usada: L - linear | N - nearest")
+        scaSize = dialog.askfloat("Input", "digite a escala:")
+        if(tipo.lower() == "l"):
+            Img_Processada = ScaleLinear(scaSize, Img_Original)
+        elif(tipo.lower() == "n"):
+            Img_Processada = ScaleNear(scaSize, Img_Original)
+        
+        Processada = True
+        visualizarImgProcess()
+    except:
+        mesBox.showerror(title="", message="erro ao escalar")
+#conteudo
 
 def initContent():
     #barra do menu
@@ -986,6 +1078,7 @@ def initContent():
     viewMenu = Menu(barraMenu, tearoff=0)
     barraMenu.add_cascade(label="View",menu=viewMenu)
     viewMenu.add_command(label="original img", command=visualizarImgOriginal)
+    viewMenu.add_command(label="process  img", command=visualizarImgProcess)
     viewMenu.add_command(label="lado a lado", command=visualizarLadoALado)
     
     editMenu = Menu(barraMenu, tearoff=0)
@@ -999,6 +1092,12 @@ def initContent():
     editMenu.add_command(label="Gray Ponderada", command=GrayScaleAprim)
     editMenu.add_command(label="Sepia", command=Sepia)
     #editMenu.add_command(label="Editar", command=editar)
+
+    #transformacoes
+    transformMenu = Menu(editMenu, tearoff=0)
+    barraMenu.add_cascade(label="Transformacoes", menu=transformMenu)
+    transformMenu.add_command(label="Escala", command=Escalar)
+
 
     #filtro
     filtroMenu = Menu(editMenu, tearoff=0)
@@ -1018,6 +1117,7 @@ def initContent():
     #criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
     
     #histograma
+    editMenu.add_separator()
     histMenu = Menu(editMenu, tearoff=0)
     editMenu.add_cascade(label="Histograma", menu=histMenu)
     histMenu.add_command(label="Histograma Original canal R", command=ShowHistogramOR)
@@ -1044,9 +1144,25 @@ def initContent():
 
 
 if __name__ == "__main__":
-    #initWindow()
-    #initContent()
-    #window.mainloop()
-    print(getRGB(343,0.84,0.49))
+    initWindow()
+    initContent()
+    window.mainloop()
+    #print(getRGB(343,0.84,0.49))   
+    ''''''''''
+    imagemO = np.zeros((100,100,3), np.uint8)
+    for i in range(99):
+        imagemO[i][i] =     (250,250,250)
+        imagemO[i][i+1] = (125,125,125)
+    ImagemEscalaL = ScaleLinear(5, imagemO)
+    ImagemEscalaN = ScaleNear(5, imagemO)
+    cv2.imshow('ImageWindow', imagemO)
+    cv2.waitKey(0)
+
+    imagens = np.concatenate((convertImg(ImagemEscalaL), convertImg(ImagemEscalaN)), axis=1)
+    cv2.imshow('ImageWindow', imagens)
+    cv2.waitKey(0)
+    '''''''''
+    #print(ImagemEscala)
+
    
         
