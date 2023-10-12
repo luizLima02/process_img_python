@@ -143,7 +143,17 @@ def getMin(Img, channel):
         return 0
 
     
-def addImg(Img, val):
+def addImg(Img, valR, valG, valB):
+    try:
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                Img[i][j] = (b+valB, g+valG, r+valR)
+    except:
+        mesBox.showinfo(title="", message="Erro ao somar imagem")
+
+def addImgRGB(Img, val):
     try:
         l, c, cha = Img.shape[:3]
         for i in range(l):
@@ -153,27 +163,31 @@ def addImg(Img, val):
     except:
         mesBox.showinfo(title="", message="Erro ao somar imagem")
 
-
+#coloca imagem de 0 a 255
 def convertImg(ImgS):
     Img = ImgS * 1
     if(CheckNegative(Img) == 1):
-        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
     if(CheckNegative(Img) == 2):
-        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
     if(CheckNegative(Img) == 3):
-        addImg(Img, -1*getMin(Img, CheckNegative(Img)))
+        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
 
-    if(Img.max() > 1.0):
+    if(Img.max() > 255):
         Img = Img / Img.max()
+        Img = Img * 255
+        
+    elif(CheckDouble(Img) and Img.max() <= 1):
+        Img = Img * 255
 
-    return Img
+    return np.uint8(Img)
 
 
 def visualizarImgOriginal():
     global Img_Original
     if Carregado: 
         try:
-            cv2.imshow('ImageWindow', Img_Original)
+            cv2.imshow('ImageWindow', convertImg(Img_Original))
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao mostrar imagem")
@@ -186,9 +200,7 @@ def visualizarLadoALado():
     global Img_Processada
     if Processada: 
         try:
-            Img_Original = np.float32(Img_Original)
-            Img_Original = Img_Original / Img_Original.max()
-            image = np.concatenate((Img_Original, convertImg(Img_Processada)), axis=1)
+            image = np.concatenate((convertImg(Img_Original), convertImg(Img_Processada)), axis=1)
             cv2.imshow('ImageWindow', image)
             cv2.waitKey(0)
         except:
@@ -235,6 +247,52 @@ def setPixel(Img, x, y, intensidade):
         return
     else:
         Img[y][x] = intensidade
+
+def getHSV(r, g, b):
+    rl = r/255 
+    gl = g/255
+    bl = b/255
+    Cmax = max(rl, gl, bl)
+    Cmin = min(rl, gl, bl)
+    deltaC = Cmax - Cmin
+    H = 0
+    S = 0
+    V = Cmax
+    if(Cmax == rl):
+        H = 60 * (((gl-bl)/deltaC) % 6)
+    elif(Cmax == gl):
+        H = 60 * (((bl-rl)/deltaC) + 2)
+    else:
+        H = 60 * (((rl-gl)/deltaC) + 4)
+    
+    if(Cmax != 0):
+        S = deltaC / Cmax
+    
+    H = round(H)
+    return H, S, V
+
+def getRGB(h, s, v):
+    Cc  = v * s 
+    Hl = h/60
+    Xx = Cc * (1 - abs((Hl % 2) - 1))
+    r1, g1, b1 = 0, 0, 0
+    if(0 <= Hl and Hl < 1):
+        r1, g1, b1 = Cc, Xx, 0
+    elif(1 <= Hl and Hl < 2):
+        r1, g1, b1 = Xx, Cc, 0
+    elif(2 <= Hl and Hl < 3):
+        r1, g1, b1 = 0, Cc, Xx
+    elif(3 <= Hl and Hl < 4):
+        r1, g1, b1 = 0, Xx, Cc
+    elif(4 <= Hl and Hl < 5):
+        r1, g1, b1 = Xx, 0, Cc
+    elif(5 <= Hl and Hl < 6):
+        r1, g1, b1 = Cc, 0, Xx
+
+    m = v - Cc
+
+    return (round((r1+m)*255), round((g1+m)*255), round((b1+m)*255))
+
 
 #processos basicos
 
@@ -283,8 +341,8 @@ def logaritmoRGB():
                         Img_Processada[i][j] = (b, g, r)
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
-                Img_Processada = np.int8(Img_Processada)
-                cv2.imshow('ImageWindow', Img_Processada)
+                Img_Processada = np.uint8(Img_Processada)
+                cv2.imshow('ImageWindow', convertImg(Img_Processada))
                 cv2.waitKey(0)
             except:
                 mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -306,8 +364,8 @@ def logaritmoRGB():
                         Img_Processada[i][j] = (b, g, r)
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
-                Img_Processada = np.int8(Img_Processada)
-                cv2.imshow('ImageWindow', Img_Processada)
+                Img_Processada = np.uint8(Img_Processada)
+                cv2.imshow('ImageWindow', convertImg(Img_Processada))
                 cv2.waitKey(0)
             except:
                 mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -348,9 +406,8 @@ def correcaoGamaRGB():
             
             #transfoma a imagem em um array de floats novamente
             Img_Processada = np.int8(Img_Processada)
-            #print(getPixel(Img_Processada, h-1, w-1))
-            #print(Img_Processada[w-1,h-1])
-            cv2.imshow('ImageWindow', Img_Processada)
+           
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -658,31 +715,34 @@ def Laplaciano():
 #faz os arrays de cor 
 
 def MakeRed(img):
+    arr = convertImg(img)
     l, c = img.shape[:2]
     redArray = np.zeros((l*c), np.uint8)
     for i in range(l):
         for j in range(c):
-            (b, g, r) = img[i][j]
+            (b, g, r) = arr[i][j]
             redArray[i*c + j] = r
 
     return redArray
 
 def MakeGreen(img):
+    arr = convertImg(img)
     l, c = img.shape[:2]
     greenArray = np.zeros((l*c), np.uint8)
     for i in range(l):
         for j in range(c):
-            (b, g, r) = img[i][j]
+            (b, g, r) = arr[i][j]
             greenArray[i*c + j] = g
 
     return greenArray
 
 def MakeBlue(img):
+    arr = convertImg(img)
     l, c = img.shape[:2]
     blueArray = np.zeros((l*c), np.uint8)
     for i in range(l):
         for j in range(c):
-            (b, g, r) = img[i][j]
+            (b, g, r) = arr[i][j]
             blueArray[i*c + j] = b
 
     return blueArray
@@ -692,17 +752,17 @@ def Histograma(img, cor):
     corA = []
     if cor.lower() == "r":
         corA = MakeRed(img)
-        plt.hist(corA, bins=256, range=(0,256), color='red')
+        plt.hist(corA, bins=256, range=(0,255), color='red')
         plt.show()
 
     elif cor.lower() == "g":
         corA = MakeGreen(img)
-        plt.hist(corA, bins=256, range=(0,256), color='green')
+        plt.hist(corA, bins=256, range=(0,255), color='green')
         plt.show()
 
     elif cor.lower() == "b":
         corA = MakeBlue(img)
-        plt.hist(corA, bins=256, range=(0,256), color='blue')
+        plt.hist(corA, bins=256, range=(0,255), color='blue')
         plt.show()
     
     else:
@@ -712,9 +772,9 @@ def Histograma(img, cor):
 
         fig, axes = plt.subplots(1, 3)
 
-        redData.hist('Red',     bins=256, range=(0,256), color='red',   ax=axes[0])
-        greenData.hist('Green', bins=256, range=(0,256), color='green', ax=axes[1])
-        blueData.hist('Blue',   bins=256, range=(0,256), color='blue',  ax=axes[2])
+        redData.hist('Red',     bins=256,  range=(0,255), color='red',   ax=axes[0])
+        greenData.hist('Green', bins=256,  range=(0,255), color='green', ax=axes[1])
+        blueData.hist('Blue',   bins=256,  range=(0,255), color='blue',  ax=axes[2])
 
         plt.show()
 
@@ -881,7 +941,6 @@ def equalizarHistograma(Img, Color, pros):
     except:
         mesBox.showinfo(title="", message="erro ao processar imagem")
 
-
 def equalizarOriginalRGB():
     equalizarHistogramaRGB(Img_Original, False)
 
@@ -910,17 +969,6 @@ def equalizarProcessadaB():
 
 #conteudo
 
-def switch():
-    global Carregado
-    global Processada
-    global Img_Original
-    global Img_Processada
-    if(Carregado and Processada):
-        w, h, c = Img_Original.shape[:3]
-        temp = np.zeros((w,h,c), np.uint8)
-        temp = Img_Original * 1
-        Img_Original = Img_Processada*1
-        Img_Processada = temp * 1
 
 def initContent():
     #barra do menu
@@ -932,7 +980,6 @@ def initContent():
 
     fileMenu.add_command(label="Open Image", command=abrirImg)
     fileMenu.add_command(label="Save Image", command=salvarImg)
-    fileMenu.add_command(label="Switch Images", command=switch)
     fileMenu.add_separator()
     fileMenu.add_command(label="Exit", command=window.destroy)
 
@@ -997,8 +1044,9 @@ def initContent():
 
 
 if __name__ == "__main__":
-    initWindow()
-    initContent()
-    window.mainloop()
+    #initWindow()
+    #initContent()
+    #window.mainloop()
+    print(getRGB(343,0.84,0.49))
    
         
