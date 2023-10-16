@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 import gc
+import colorsys
 import tkinter as tk
 from tkinter import *
 from tkinter import ttk
@@ -27,8 +28,7 @@ Editing = False
 #setup window
 def initWindow():
     global window
-    global Log
-    global LogFrame
+    global icone
     window = Tk()
     #window.resizable(False, False)
     window.geometry('450x600')
@@ -142,7 +142,6 @@ def getMin(Img, channel):
         mesBox.showinfo(title="", message="erro ao pegar o minimo")
         return 0
 
-    
 def addImg(Img, valR, valG, valB):
     try:
         l, c, cha = Img.shape[:3]
@@ -160,6 +159,21 @@ def addImgRGB(Img, val):
             for j in range(c):
                 (b, g, r) = Img[i][j]
                 Img[i][j] = (b+val, g+val, r+val)
+    except:
+        mesBox.showinfo(title="", message="Erro ao somar imagem")
+
+def addImgHSV(Img, h, s, v):
+    try:
+        l, c, cha = Img.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                (b, g, r) = Img[i][j]
+                ho, so, vo = getHSV(r, g, b)
+                ho = ho + h
+                so = so + s 
+                vo = vo + v
+                nr, ng, nb = getRGB(ho, so, vo)
+                Img[i][j] = (nb, ng, nr)
     except:
         mesBox.showinfo(title="", message="Erro ao somar imagem")
 
@@ -243,6 +257,7 @@ def getB(Img, x, y):
         b, g, r = Img[y][x]
         return b
 
+#retorna o formato B G R
 def getPixel(Img, x, y):
     l, c = Img.shape[:2]
     if(x >= c) or (x < 0) or (y < 0) or (y >= l):
@@ -259,6 +274,21 @@ def setPixel(Img, x, y, intensidade):
         Img[y][x] = intensidade
 
 def getHSV(r, g, b):
+    if(r > 255):
+        r = 255
+    elif(r < 0):
+        r = 0
+
+    if(g > 255):
+        g = 255
+    elif g < 0:
+        g = 0
+
+    if(b > 255):
+        b = 255
+    elif b < 0:
+        b = 0
+
     rl = r/255 
     gl = g/255
     bl = b/255
@@ -268,12 +298,13 @@ def getHSV(r, g, b):
     H = 0
     S = 0
     V = Cmax
-    if(Cmax == rl):
-        H = 60 * (((gl-bl)/deltaC) % 6)
-    elif(Cmax == gl):
-        H = 60 * (((bl-rl)/deltaC) + 2)
-    else:
-        H = 60 * (((rl-gl)/deltaC) + 4)
+    if(deltaC != 0):
+        if(Cmax == rl):
+            H = 60 * (((gl-bl)/deltaC) % 6)
+        elif(Cmax == gl):
+            H = 60 * (((bl-rl)/deltaC) + 2)
+        elif(Cmax == bl):
+            H = 60 * (((rl-gl)/deltaC) + 4)
     
     if(Cmax != 0):
         S = deltaC / Cmax
@@ -282,6 +313,21 @@ def getHSV(r, g, b):
     return H, S, V
 
 def getRGB(h, s, v):
+    if(s > 1):
+        s = 1
+    elif s < 0:
+        s = 0
+
+    if(v > 1):
+        v = 1
+    elif v < 0:
+        v = 0
+
+    if(h > 360):
+        h = 360
+    elif h < 0:
+        h = 0
+    
     Cc  = v * s 
     Hl = h/60
     Xx = Cc * (1 - abs((Hl % 2) - 1))
@@ -303,6 +349,11 @@ def getRGB(h, s, v):
 
     return round((r1+m)*255), round((g1+m)*255), round((b1+m)*255)
 
+def getRGB_CMY(c, m, y, k):
+    r = 255 * (1-c) * (1-k)
+    g = 255 * (1-m) * (1-k)
+    b = 255 * (1-y) * (1-k)
+    return r, g, b
 
 #processos basicos
 
@@ -567,6 +618,20 @@ def criaFiltro5():
             except:
                 mesBox.showerror(title="", message="Valor Invalido")
 
+def criaFiltro7():
+    global Fsize
+    global Filtro
+    Fsize = 7
+    Filtro = np.zeros((Fsize, Fsize), np.float16)
+    #pede os valores para o Filtro
+    for i in range(Fsize):
+        for j in range(Fsize):
+            try:
+                num = dialog.askfloat("Input", f"valor para a posicao: {i} x {j}")
+                Filtro[i][j] = num
+            except:
+                mesBox.showerror(title="", message="Valor Invalido")
+
 def criaFiltro9():
     global Fsize
     global Filtro
@@ -639,9 +704,196 @@ def aplicaFiltro5(x, y, c):
         valB = valB + valoresB[i]
     return valB, valG, valR
 
+def aplicaFiltro7(x, y, c):
+    global Img_Original
+    global Filtro
+    valoresR = [Filtro[c-3][c-3]*getR(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getR(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getR(Img_Original, x-1, y-3), Filtro[c-3][c]*getR(Img_Original, x, y-3), Filtro[c-3][c+1]*getR(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getR(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getR(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getR(Img_Original, x-3, y-2),Filtro[c-2][c-2]*getR(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getR(Img_Original, x-1, y-2), Filtro[c-2][c]*getR(Img_Original, x, y-2), Filtro[c-2][c+1]*getR(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getR(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getR(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getR(Img_Original, x-3, y-1),Filtro[c-1][c-2]*getR(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getR(Img_Original, x-1, y-1), Filtro[c-1][c]*getR(Img_Original, x, y-1), Filtro[c-1][c+1]*getR(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getR(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getR(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getR(Img_Original, x-3, y),Filtro[c][c-2]*getR(Img_Original, x-2, y),     Filtro[c][c-1]*getR(Img_Original, x-1, y),     Filtro[c][c]*getR(Img_Original, x, y),     Filtro[c][c+1]*getR(Img_Original, x+1, y),     Filtro[c][c+2]*getR(Img_Original, x+2, y),Filtro[c][c+3]*getR(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getR(Img_Original, x-3, y+1),Filtro[c+1][c-2]*getR(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getR(Img_Original, x-1, y+1), Filtro[c+1][c]*getR(Img_Original, x, y+1), Filtro[c+1][c+1]*getR(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getR(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getR(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getR(Img_Original, x-3, y+2),Filtro[c+2][c-2]*getR(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getR(Img_Original, x-1, y+2), Filtro[c+2][c]*getR(Img_Original, x, y+2), Filtro[c+2][c+1]*getR(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getR(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getR(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getR(Img_Original, x-3, y+3),Filtro[c+3][c-2]*getR(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getR(Img_Original, x-1, y+3), Filtro[c+3][c]*getR(Img_Original, x, y+3), Filtro[c+3][c+1]*getR(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getR(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getR(Img_Original, x+3, y+3)#linha 5
+              ]
+    
+    valoresG = [Filtro[c-3][c-3]*getG(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getG(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getG(Img_Original, x-1, y-3), Filtro[c-3][c]*getG(Img_Original, x, y-3), Filtro[c-3][c+1]*getG(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getG(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getG(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getG(Img_Original, x-3, y-2),Filtro[c-2][c-2]*getG(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getG(Img_Original, x-1, y-2), Filtro[c-2][c]*getG(Img_Original, x, y-2), Filtro[c-2][c+1]*getG(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getG(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getG(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getG(Img_Original, x-3, y-1),Filtro[c-1][c-2]*getG(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getG(Img_Original, x-1, y-1), Filtro[c-1][c]*getG(Img_Original, x, y-1), Filtro[c-1][c+1]*getG(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getG(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getG(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getG(Img_Original, x-3, y),Filtro[c][c-2]*getG(Img_Original, x-2, y),     Filtro[c][c-1]*getG(Img_Original, x-1, y),     Filtro[c][c]*getG(Img_Original, x, y),     Filtro[c][c+1]*getG(Img_Original, x+1, y),     Filtro[c][c+2]*getG(Img_Original, x+2, y),Filtro[c][c+3]*getG(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getG(Img_Original, x-3, y+1),Filtro[c+1][c-2]*getG(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getG(Img_Original, x-1, y+1), Filtro[c+1][c]*getG(Img_Original, x, y+1), Filtro[c+1][c+1]*getG(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getG(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getG(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getG(Img_Original, x-3, y+2),Filtro[c+2][c-2]*getG(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getG(Img_Original, x-1, y+2), Filtro[c+2][c]*getG(Img_Original, x, y+2), Filtro[c+2][c+1]*getG(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getG(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getG(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getG(Img_Original, x-3, y+3),Filtro[c+3][c-2]*getG(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getG(Img_Original, x-1, y+3), Filtro[c+3][c]*getG(Img_Original, x, y+3), Filtro[c+3][c+1]*getG(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getG(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getG(Img_Original, x+3, y+3)#linha 5
+              ]
+    
+    valoresB = [Filtro[c-3][c-3]*getB(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getB(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getB(Img_Original, x-1, y-3), Filtro[c-3][c]*getB(Img_Original, x, y-3), Filtro[c-3][c+1]*getB(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getB(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getB(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getB(Img_Original, x-3, y-2),Filtro[c-2][c-2]*getB(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getB(Img_Original, x-1, y-2), Filtro[c-2][c]*getB(Img_Original, x, y-2), Filtro[c-2][c+1]*getB(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getB(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getB(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getB(Img_Original, x-3, y-1),Filtro[c-1][c-2]*getB(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getB(Img_Original, x-1, y-1), Filtro[c-1][c]*getB(Img_Original, x, y-1), Filtro[c-1][c+1]*getB(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getB(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getB(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getB(Img_Original, x-3, y),Filtro[c][c-2]*getB(Img_Original, x-2, y),     Filtro[c][c-1]*getB(Img_Original, x-1, y),     Filtro[c][c]*getB(Img_Original, x, y),     Filtro[c][c+1]*getB(Img_Original, x+1, y),     Filtro[c][c+2]*getB(Img_Original, x+2, y),Filtro[c][c+3]*getB(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getB(Img_Original, x-3, y+1),Filtro[c+1][c-2]*getB(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getB(Img_Original, x-1, y+1), Filtro[c+1][c]*getB(Img_Original, x, y+1), Filtro[c+1][c+1]*getB(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getB(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getB(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getB(Img_Original, x-3, y+2),Filtro[c+2][c-2]*getB(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getB(Img_Original, x-1, y+2), Filtro[c+2][c]*getB(Img_Original, x, y+2), Filtro[c+2][c+1]*getB(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getB(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getB(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getB(Img_Original, x-3, y+3),Filtro[c+3][c-2]*getB(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getB(Img_Original, x-1, y+3), Filtro[c+3][c]*getB(Img_Original, x, y+3), Filtro[c+3][c+1]*getB(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getB(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getB(Img_Original, x+3, y+3)#linha 5
+              ]
+    valR = 0
+    valG = 0
+    valB = 0
+    for i in range(25):
+        valR = valR + valoresR[i]
+        valG = valG + valoresG[i]
+        valB = valB + valoresB[i]
+    return valB, valG, valR
+
+def aplicaFiltro9(x, y, c):
+    global Img_Original
+    global Filtro
+    valoresR = [Filtro[c-4][c-3]*getR(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getR(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getR(Img_Original, x-1, y-3), Filtro[c-3][c]*getR(Img_Original, x, y-3), Filtro[c-3][c+1]*getR(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getR(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getR(Img_Original, x+3, y-3),
+               Filtro[c-3][c-3]*getR(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getR(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getR(Img_Original, x-1, y-3), Filtro[c-3][c]*getR(Img_Original, x, y-3), Filtro[c-3][c+1]*getR(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getR(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getR(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getR(Img_Original, x-2, y-2),Filtro[c-2][c-2]*getR(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getR(Img_Original, x-1, y-2), Filtro[c-2][c]*getR(Img_Original, x, y-2), Filtro[c-2][c+1]*getR(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getR(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getR(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getR(Img_Original, x-1, y-1),Filtro[c-1][c-2]*getR(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getR(Img_Original, x-1, y-1), Filtro[c-1][c]*getR(Img_Original, x, y-1), Filtro[c-1][c+1]*getR(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getR(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getR(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getR(Img_Original, x, y-3),Filtro[c][c-2]*getR(Img_Original, x-2, y),     Filtro[c][c-1]*getR(Img_Original, x-1, y),     Filtro[c][c]*getR(Img_Original, x, y),     Filtro[c][c+1]*getR(Img_Original, x+1, y),     Filtro[c][c+2]*getR(Img_Original, x+2, y),Filtro[c][c+3]*getR(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getR(Img_Original, x+1, y-3),Filtro[c+1][c-2]*getR(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getR(Img_Original, x-1, y+1), Filtro[c+1][c]*getR(Img_Original, x, y+1), Filtro[c+1][c+1]*getR(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getR(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getR(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getR(Img_Original, x+2, y-3),Filtro[c+2][c-2]*getR(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getR(Img_Original, x-1, y+2), Filtro[c+2][c]*getR(Img_Original, x, y+2), Filtro[c+2][c+1]*getR(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getR(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getR(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getR(Img_Original, x+3, y-3),Filtro[c+3][c-2]*getR(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getR(Img_Original, x-1, y+3), Filtro[c+3][c]*getR(Img_Original, x, y+3), Filtro[c+3][c+1]*getR(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getR(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getR(Img_Original, x+3, y+3)#linha 5
+              ]
+    
+    valoresG = [Filtro[c-3][c-3]*getG(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getG(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getG(Img_Original, x-1, y-3), Filtro[c-3][c]*getG(Img_Original, x, y-3), Filtro[c-3][c+1]*getG(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getG(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getG(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getG(Img_Original, x-2, y-3),Filtro[c-2][c-2]*getG(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getG(Img_Original, x-1, y-2), Filtro[c-2][c]*getG(Img_Original, x, y-2), Filtro[c-2][c+1]*getG(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getG(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getG(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getG(Img_Original, x-1, y-3),Filtro[c-1][c-2]*getG(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getG(Img_Original, x-1, y-1), Filtro[c-1][c]*getG(Img_Original, x, y-1), Filtro[c-1][c+1]*getG(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getG(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getG(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getG(Img_Original, x, y-3),Filtro[c][c-2]*getG(Img_Original, x-2, y),     Filtro[c][c-1]*getG(Img_Original, x-1, y),     Filtro[c][c]*getG(Img_Original, x, y),     Filtro[c][c+1]*getG(Img_Original, x+1, y),     Filtro[c][c+2]*getG(Img_Original, x+2, y),Filtro[c][c+3]*getG(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getG(Img_Original, x+1, y-3),Filtro[c+1][c-2]*getG(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getG(Img_Original, x-1, y+1), Filtro[c+1][c]*getG(Img_Original, x, y+1), Filtro[c+1][c+1]*getG(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getG(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getG(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getG(Img_Original, x+2, y-3),Filtro[c+2][c-2]*getG(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getG(Img_Original, x-1, y+2), Filtro[c+2][c]*getG(Img_Original, x, y+2), Filtro[c+2][c+1]*getG(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getG(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getG(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getG(Img_Original, x+3, y-3),Filtro[c+3][c-2]*getG(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getG(Img_Original, x-1, y+3), Filtro[c+3][c]*getG(Img_Original, x, y+3), Filtro[c+3][c+1]*getG(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getG(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getG(Img_Original, x+3, y+3)#linha 5
+              ]
+    
+    valoresB = [Filtro[c-3][c-3]*getB(Img_Original, x-3, y-3),Filtro[c-3][c-2]*getB(Img_Original, x-2, y-3), Filtro[c-3][c-1]*getB(Img_Original, x-1, y-3), Filtro[c-3][c]*getB(Img_Original, x, y-3), Filtro[c-3][c+1]*getB(Img_Original, x+1, y-3), Filtro[c-3][c+2]*getB(Img_Original, x+2, y-3),Filtro[c-3][c+3]*getB(Img_Original, x+3, y-3),
+               Filtro[c-2][c-3]*getB(Img_Original, x-2, y-3),Filtro[c-2][c-2]*getB(Img_Original, x-2, y-2), Filtro[c-2][c-1]*getB(Img_Original, x-1, y-2), Filtro[c-2][c]*getB(Img_Original, x, y-2), Filtro[c-2][c+1]*getB(Img_Original, x+1, y-2), Filtro[c-2][c+2]*getB(Img_Original, x+2, y-2),Filtro[c-2][c+3]*getB(Img_Original, x+3, y-2), #linha 1
+               Filtro[c-1][c-3]*getB(Img_Original, x-1, y-3),Filtro[c-1][c-2]*getB(Img_Original, x-2, y-1), Filtro[c-1][c-1]*getB(Img_Original, x-1, y-1), Filtro[c-1][c]*getB(Img_Original, x, y-1), Filtro[c-1][c+1]*getB(Img_Original, x+1, y-1), Filtro[c-1][c+2]*getB(Img_Original, x+2, y-1),Filtro[c-2][c+3]*getB(Img_Original, x+3, y-1), #linha 2
+               Filtro[c][c-3]*getB(Img_Original, x, y-3),Filtro[c][c-2]*getB(Img_Original, x-2, y),     Filtro[c][c-1]*getB(Img_Original, x-1, y),     Filtro[c][c]*getB(Img_Original, x, y),     Filtro[c][c+1]*getB(Img_Original, x+1, y),     Filtro[c][c+2]*getB(Img_Original, x+2, y),Filtro[c][c+3]*getB(Img_Original, x+3, y), #linha 3
+               Filtro[c+1][c-3]*getB(Img_Original, x+1, y-3),Filtro[c+1][c-2]*getB(Img_Original, x-2, y+1), Filtro[c+1][c-1]*getB(Img_Original, x-1, y+1), Filtro[c+1][c]*getB(Img_Original, x, y+1), Filtro[c+1][c+1]*getB(Img_Original, x+1, y+1), Filtro[c+1][c+2]*getB(Img_Original, x+2, y+1),Filtro[c+1][c+3]*getB(Img_Original, x+3, y+1), #linha 4
+               Filtro[c+2][c-3]*getB(Img_Original, x+2, y-3),Filtro[c+2][c-2]*getB(Img_Original, x-2, y+2), Filtro[c+2][c-1]*getB(Img_Original, x-1, y+2), Filtro[c+2][c]*getB(Img_Original, x, y+2), Filtro[c+2][c+1]*getB(Img_Original, x+1, y+2), Filtro[c+2][c+2]*getB(Img_Original, x+2, y+2),Filtro[c+2][c+3]*getB(Img_Original, x+3, y+2),
+               Filtro[c+3][c-3]*getB(Img_Original, x+3, y-3),Filtro[c+3][c-2]*getB(Img_Original, x-2, y+3), Filtro[c+3][c-1]*getB(Img_Original, x-1, y+3), Filtro[c+3][c]*getB(Img_Original, x, y+3), Filtro[c+3][c+1]*getB(Img_Original, x+1, y+3), Filtro[c+3][c+2]*getB(Img_Original, x+2, y+3),Filtro[c+3][c+3]*getB(Img_Original, x+3, y+3)#linha 5
+              ]
+    valR = 0
+    valG = 0
+    valB = 0
+    for i in range(25):
+        valR = valR + valoresR[i]
+        valG = valG + valoresG[i]
+        valB = valB + valoresB[i]
+    return valB, valG, valR
+
+#pega os valores
+
+def getValores3(x, y):
+    global Img_Original
+    global Filtro
+    valoresR = np.array([getR(Img_Original, x-1, y-1), getR(Img_Original, x, y-1), getR(Img_Original, x+1, y-1), getR(Img_Original, x-1, y), getR(Img_Original, x, y), getR(Img_Original, x+1, y), getR(Img_Original, x-1, y+1), getR(Img_Original, x, y+1), getR(Img_Original, x+1, y+1)])
+    
+    valoresG = np.array([getG(Img_Original, x-1, y-1), getG(Img_Original, x, y-1), getG(Img_Original, x+1, y-1), getG(Img_Original, x-1, y), getG(Img_Original, x, y), getG(Img_Original, x+1, y), getG(Img_Original, x-1, y+1), getG(Img_Original, x, y+1), getG(Img_Original, x+1, y+1)])
+    
+    valoresB = np.array([getB(Img_Original, x-1, y-1), getB(Img_Original, x, y-1), getB(Img_Original, x+1, y-1), getB(Img_Original, x-1, y),    getB(Img_Original, x, y), getB(Img_Original, x+1, y), getB(Img_Original, x-1, y+1), getB(Img_Original, x, y+1),  getB(Img_Original, x+1, y+1)])
+    
+    valR = np.median(valoresR)
+    valG = np.median(valoresG)
+    valB = np.median(valoresB)
+
+    return valB, valG, valR
+
+def getValores5(x, y):
+    global Img_Original
+    global Filtro
+    valoresR = np.array([getR(Img_Original, x-2, y-2), getR(Img_Original, x-1, y-2), getR(Img_Original, x, y-2), getR(Img_Original, x+1, y-2), getR(Img_Original, x+2, y-2), #linha 1
+               getR(Img_Original, x-2, y-1), getR(Img_Original, x-1, y-1), getR(Img_Original, x, y-1), getR(Img_Original, x+1, y-1), getR(Img_Original, x+2, y-1), #linha 2
+               getR(Img_Original, x-2, y),     getR(Img_Original, x-1, y),     getR(Img_Original, x, y),     getR(Img_Original, x+1, y),  getR(Img_Original, x+2, y), #linha 3
+               getR(Img_Original, x-2, y+1), getR(Img_Original, x-1, y+1), getR(Img_Original, x, y+1), getR(Img_Original, x+1, y+1), getR(Img_Original, x+2, y+1), #linha 4
+               getR(Img_Original, x-2, y+2), getR(Img_Original, x-1, y+2), getR(Img_Original, x, y+2), getR(Img_Original, x+1, y+2), getR(Img_Original, x+2, y+2), #linha 5
+              ])
+    
+    valoresG = np.array([getG(Img_Original, x-2, y-2), getG(Img_Original, x-1, y-2), getG(Img_Original, x, y-2), getG(Img_Original, x+1, y-2), getG(Img_Original, x+2, y-2), #linha 1
+               getG(Img_Original, x-2, y-1), getG(Img_Original, x-1, y-1), getG(Img_Original, x, y-1), getG(Img_Original, x+1, y-1), getG(Img_Original, x+2, y-1), #linha 2
+               getG(Img_Original, x-2, y),     getG(Img_Original, x-1, y),     getG(Img_Original, x, y),     getG(Img_Original, x+1, y),  getG(Img_Original, x+2, y), #linha 3
+               getG(Img_Original, x-2, y+1), getG(Img_Original, x-1, y+1), getG(Img_Original, x, y+1), getG(Img_Original, x+1, y+1), getG(Img_Original, x+2, y+1), #linha 4
+               getG(Img_Original, x-2, y+2), getG(Img_Original, x-1, y+2), getG(Img_Original, x, y+2), getG(Img_Original, x+1, y+2), getG(Img_Original, x+2, y+2), #linha 5
+              ])
+    
+    valoresB = np.array([getB(Img_Original, x-2, y-2), getB(Img_Original, x-1, y-2), getB(Img_Original, x, y-2), getB(Img_Original, x+1, y-2), getB(Img_Original, x+2, y-2), #linha 1
+               getB(Img_Original, x-2, y-1), getB(Img_Original, x-1, y-1), getB(Img_Original, x, y-1), getB(Img_Original, x+1, y-1), getB(Img_Original, x+2, y-1), #linha 2
+               getB(Img_Original, x-2, y),     getB(Img_Original, x-1, y),     getB(Img_Original, x, y),     getB(Img_Original, x+1, y),  getB(Img_Original, x+2, y), #linha 3
+               getB(Img_Original, x-2, y+1), getB(Img_Original, x-1, y+1), getB(Img_Original, x, y+1), getB(Img_Original, x+1, y+1), getB(Img_Original, x+2, y+1), #linha 4
+               getB(Img_Original, x-2, y+2), getB(Img_Original, x-1, y+2), getB(Img_Original, x, y+2), getB(Img_Original, x+1, y+2), getB(Img_Original, x+2, y+2), #linha 5
+              ])
+    
+    valR = np.median(valoresR)
+    valG = np.median(valoresG)
+    valB = np.median(valoresB)
+
+    return valB, valG, valR
+   
+
 #convolucao
 
-def convRGB():
+def MedianaS(size):
+    global Processada
+    global Img_Processada
+    global Img_Original
+    try:
+        l, c, cha = Img_Original.shape[:3]
+        Img_Processada = np.zeros((l, c, cha), np.float32)
+        if(size == 3):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = getValores3(j, i)
+                    Img_Processada[i][j] = (b, g, r)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.waitKey(0)
+            Processada = True
+        elif(size == 5):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = getValores5(j, i)
+                    Img_Processada[i][j] =  (b, g, r)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.waitKey(0)
+            Processada = True
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro")
+
+
+def convRet():
+    global Fsize
+    global Processada
+    global Img_Processada
+    global Img_Original
+    global Filtro
+    try:
+        l, c, cha = Img_Original.shape[:3]
+        Imagem_convol = np.zeros((l, c, cha), np.float32)
+        center = math.floor(Fsize/2)
+        if(Fsize == 3):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro3(j, i, center)
+                    Imagem_convol[i][j] = (b, g, r)
+        elif(Fsize == 5):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro5(j, i, center)
+                    Imagem_convol[i][j] =  (b, g, r)
+        elif(Fsize == 7):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro7(j, i, center)
+                    Imagem_convol[i][j] =  (b, g, r)
+        elif(Fsize == 9):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro9(j, i, center)
+                    Imagem_convol[i][j] =  (b, g, r)
+        
+        return Imagem_convol
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro")
+
+def Convolucao():
     global Fsize
     global Processada
     global Img_Processada
@@ -667,8 +919,57 @@ def convRGB():
             cv2.imshow('ImageWindow', convertImg(Img_Processada))
             cv2.waitKey(0)
             Processada = True
+        elif(Fsize == 7):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro7(j, i, center)
+                    Img_Processada[i][j] =  (b, g, r)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.waitKey(0)
+            Processada = True
+        elif(Fsize == 9):
+            for i in range(l-1): #y
+                for j in range(c-1): #x
+                    (b, g, r) = aplicaFiltro9(j, i, center)
+                    Img_Processada[i][j] =  (b, g, r)
+            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.waitKey(0)
+            Processada = True
     except:
         mesBox.showerror(title="", message="erro ao aplicar filtro")
+
+
+#callback
+
+def Sobel():
+    global Fsize
+    global Processada
+    global Img_Processada
+    global Img_Original
+    global Filtro
+    #setup filtro
+    try:
+        Filtro = np.zeros((3,3), np.float16)
+        Fsize = 3
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] =  -1, 0,  1
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] =  -2, 0,  2 
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] =  -1, 0,  1
+        xAplicado = convRet()
+
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] =  1,  2,   1
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] =  0,  0,   0 
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] = -1, -2,  -1
+        yAplicado = convRet()
+
+        G = np.sqrt(np.square(xAplicado) + np.square(yAplicado))
+        
+        Img_Processada = G*1
+        cv2.imshow('ImageWindow', convertImg(Img_Processada))
+        cv2.waitKey(0)
+        Processada = True
+    except:
+      mesBox.showerror(title="", message="erro o Laplaciano")
+
 
 def Media():
     global Fsize
@@ -683,7 +984,7 @@ def Media():
         Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/9, 1/9, 1/9
         Filtro[1][0], Filtro[1][1], Filtro[1][2] = 1/9, 1/9, 1/9
         Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/9, 1/9, 1/9
-        convRGB()
+        Convolucao()
     except:
        mesBox.showerror(title="", message="erro ao aplicar filtro media")
 
@@ -700,7 +1001,7 @@ def Ponderada():
         Filtro[0][0], Filtro[0][1], Filtro[0][2] = 1/16, 2/16, 1/16
         Filtro[1][0], Filtro[1][1], Filtro[1][2] = 2/16, 4/16, 2/16
         Filtro[2][0], Filtro[2][1], Filtro[2][2] = 1/16, 2/16, 1/16
-        convRGB()
+        Convolucao()
     except:
         mesBox.showerror(title="", message="erro ao aplicar filtro ponderada")
 
@@ -717,9 +1018,38 @@ def Laplaciano():
         Filtro[0][0], Filtro[0][1], Filtro[0][2] =  0, -1,  0
         Filtro[1][0], Filtro[1][1], Filtro[1][2] = -1,  4, -1 
         Filtro[2][0], Filtro[2][1], Filtro[2][2] =  0, -1,  0
-        convRGB()
+        Convolucao()
     except:
        mesBox.showerror(title="", message="erro o Laplaciano")
+
+def HighBoost():
+    global Fsize
+    global Processada
+    global Img_Processada
+    global Img_Original
+    global Filtro
+    #setup filtro
+    try:
+        Filtro = np.zeros((3,3), np.float16)
+        Fsize = 3
+        Filtro[0][0], Filtro[0][1], Filtro[0][2] =  -1, -1, -1
+        Filtro[1][0], Filtro[1][1], Filtro[1][2] =  -1,  9, -1 
+        Filtro[2][0], Filtro[2][1], Filtro[2][2] =  -1, -1, -1
+        Convolucao()
+    except:
+       mesBox.showerror(title="", message="erro o Laplaciano")
+
+def Mediana3():
+    try:
+        MedianaS(3)
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro")
+
+def Mediana5():
+    try:
+        MedianaS(5)
+    except:
+        mesBox.showerror(title="", message="erro ao aplicar filtro")
 ################ Histograma #####################
 
 #faz os arrays de cor 
@@ -757,6 +1087,43 @@ def MakeBlue(img):
 
     return blueArray
 
+##pega os HSV para o histograma
+def MakeHue(img):
+    arr = convertImg(img)
+    l, c = img.shape[:2]
+    hueArray = np.zeros((l*c), np.uint16)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = arr[i][j]
+            h, s, v = getHSV(r, g, b)
+            hueArray[i*c + j] = h
+
+    return hueArray
+
+def MakeSaturation(img):
+    arr = convertImg(img)
+    l, c = img.shape[:2]
+    satArray = np.zeros((l*c), np.float32)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = arr[i][j]
+            h, s, v = getHSV(r, g, b)
+            satArray[i*c + j] = s
+
+    return satArray
+
+def MakeBrilho(img):
+    arr = convertImg(img)
+    l, c = img.shape[:2]
+    brilArray = np.zeros((l*c), np.float32)
+    for i in range(l):
+        for j in range(c):
+            (b, g, r) = arr[i][j]
+            h, s, v = getHSV(r, g, b)
+            brilArray[i*c + j] = v
+
+    return brilArray
+
 #cria histograma
 def Histograma(img, cor):
     corA = []
@@ -788,7 +1155,33 @@ def Histograma(img, cor):
 
         plt.show()
 
-#mostrar histograma
+def HistogramaHSV(img):
+    hueData   = pd.DataFrame(dict(Hue=np.array(MakeHue(img))))
+    saturaData = pd.DataFrame(dict(Saturation=np.array(MakeSaturation(img))))
+    brilhoData  = pd.DataFrame(dict(Value=np.array(MakeBrilho(img))))
+
+    fig, axes = plt.subplots(1, 3)
+
+    hueData.hist('Hue',     bins=256,  range=(0,360), color='red',   ax=axes[0])
+    saturaData.hist('Saturation', bins=256,  range=(0,1), color='green', ax=axes[1])
+    brilhoData.hist('Value',   bins=256,  range=(0,1), color='blue',  ax=axes[2])
+
+    plt.show()
+
+#mostrar histograma HSV
+def ShowHistogramOHSV():
+    try:
+        HistogramaHSV(Img_Original)
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
+
+def ShowHistogramPHSV():
+    try:
+        HistogramaHSV(Img_Processada)
+    except:
+        mesBox.showerror("Error", "Erro ao plotar histograma")
+
+#mostra histograma RGB
 def ShowHistogramOR():
     try:
         Histograma(Img_Original, "R")
@@ -837,7 +1230,6 @@ def ShowHistogramPRGB():
     except:
         mesBox.showerror("Error", "Erro ao plotar histograma")
 
-#equalizar histogramas
 def equalizarHistogramaRGB(Img, pros):
     try:
         global Carregado
@@ -963,8 +1355,8 @@ def equalizarOriginalG():
 def equalizarOriginalB():
     equalizarHistograma(Img_Original, "B", False)
 
-###############################################
 
+###############################################
 def equalizarProcessadaRGB():
     equalizarHistogramaRGB(Img_Processada, True)
 
@@ -978,10 +1370,10 @@ def equalizarProcessadaB():
     equalizarHistograma(Img_Processada, "B", True)
 
 #transfomacoes
-def pontoRotacionado(x, y, ang):
-    xR = (x*math.cos(math.radians(ang))) - (y*math.sin(math.radians(ang)))
-    yR = (x*math.sin(math.radians(ang))) + (y*math.cos(math.radians(ang)))
-    return xR, yR
+def pontoRotacionado(x, y, xc, yc, ang):
+    xR = ((x-xc)*math.cos(math.radians(ang))) - ((y-yc)*math.sin(math.radians(ang))) +xc
+    yR = ((x-xc)*math.sin(math.radians(ang))) + ((y-yc)*math.cos(math.radians(ang))) +xc
+    return int(xR), int(yR)
 
 def interpolar(img, x, y):
     # Obtenha os índices dos quatro cantos
@@ -1020,6 +1412,31 @@ def interpolar(img, x, y):
     
     return valor_interpoladoB, valor_interpoladoG, valor_interpoladoR
 
+def RotacionarNear(img, angle):
+    l, c, cha = img.shape[:3]
+    xcenter, ycenter = int(c/2), int(l/2)
+    p1 = pontoRotacionado(0,0,xcenter, ycenter, angle)
+    p2 = pontoRotacionado(c,0,xcenter, ycenter, angle)
+    p3 = pontoRotacionado(c,l,xcenter, ycenter, angle)
+    p4 = pontoRotacionado(0,l,xcenter, ycenter, angle)
+
+
+    ymin = round(min(p1[1], p2[1], p3[1], p4[1]))
+    xmin = round(min(p1[0], p2[0], p3[0], p4[0]))
+
+    ymax = round(max(p1[1], p2[1], p3[1], p4[1]))
+    xmax = round(max(p1[0], p2[0], p3[0], p4[0]))
+
+    ln = ymax + abs(ymin)
+    cn = xmax + abs(xmin)
+
+    ImagemRotacionada = np.zeros((ln,cn, cha), np.float32)
+    for i in range(ln):
+        for j in range(cn):
+            px, py = pontoRotacionado(j,i,xcenter, ycenter, -angle)
+            (b, g, r) = getPixel(img, px, py)
+            ImagemRotacionada[i][j] = (b, g, r)
+    return ImagemRotacionada
 
 def ScaleNear(scaleSize, img):
     l, c, cha = img.shape[:3]
@@ -1060,6 +1477,213 @@ def Escalar():
         visualizarImgProcess()
     except:
         mesBox.showerror(title="", message="erro ao escalar")
+
+#Tratamento de Cores
+def ChromaKey():
+    global Img_Original
+    global Img_Processada
+    global Processada
+    global Carregado
+    try:
+        Img_Chroma = []
+        distancia = dialog.askinteger("Input", "digite a distancia da cor verde:")
+        #abri a imagem que substitui
+        filetypes = (('image files', ('*.png', '*.bmp', '*.dib' , '*.jpeg', '*.jpg', '*.jpe', '*.jp2', '*.webp', '*.avif', '*.pbm', '*.pgm', '*.ppm', '*.pxm', '*.pnm', '*.pfm', '*.sr', '*.ras' , '*.tiff', '*.tif', '*.exr', '*.hdr', '*.pic')),
+                 ("all files", '*.*'))
+            #selecione o arquivo
+        filepath = filedialog.askopenfilename(title="Abrir Imagem", initialdir="/", filetypes=filetypes)
+        if(cv2.haveImageReader(filepath) == True):
+            Img_Chroma = cv2.imread(filepath, 1)
+        else:
+            mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
+            return
+        
+        Img_Processada = convertImg(Img_Original)
+        Img_Processada = np.float32(Img_Processada)
+        l, c, cha = Img_Processada.shape[:3]
+        for i in range(l):
+            for j in range(c):
+                bo, go, ro = getPixel(Img_Processada, j, i)
+                if(go - ro >= distancia and go - bo >= distancia):
+                    bn, gn, rn = getPixel(Img_Chroma, j, i)
+                    Img_Processada[i][j] = (bn, gn, rn)
+                    
+        Processada = True
+        visualizarImgProcess()
+    except:
+        mesBox.showerror(title="", message="erro ao criar Chroma")
+
+def TratarCanalRGB():
+    global Img_Original
+    global Img_Processada
+    global Processada
+    global Carregado
+    try:
+        #abre uma janela com os valores para aumentar ou diminuir de R G B
+        valR = dialog.askinteger("Input", "digite o valor para aumentar em R:")
+        valG = dialog.askinteger("Input", "digite o valor para aumentar em G:")
+        valB = dialog.askinteger("Input", "digite o valor para aumentar em B:")
+        #adiciona os valores para a imagem original
+        Img_Processada = convertImg(Img_Original)
+        addImg(Img_Processada, valR, valG, valB)
+        Processada = True
+        visualizarImgProcess()
+        #mostrar a imagem com os valores alterados
+    except:
+        mesBox.showerror(title="", message="erro ao Tratar Canal")
+
+def TratarCanalCMY():
+    global Img_Original
+    global Img_Processada
+    global Processada
+    global Carregado
+    try:
+        #abre uma janela com os valores para aumentar ou diminuir de R G B
+        valC = dialog.askinteger("Input", "digite o valor para aumentar em C (-100 a 100):")
+        valM = dialog.askinteger("Input", "digite o valor para aumentar em M (-100 a 100):")
+        valY = dialog.askinteger("Input", "digite o valor para aumentar em Y (-100 a 100):")
+        #adiciona os valores para a imagem original
+        Img_Processada = convertImg(Img_Original)
+        valR, valG, valB = getRGB_CMY((valC/100), (valM/100), (valY/100), 0)
+        addImg(Img_Processada, valR, valG, valB)
+        Processada = True
+        visualizarImgProcess()
+        #mostrar a imagem com os valores alterados
+    except:
+        mesBox.showerror(title="", message="erro ao Tratar Canal")
+
+def TratarMSB():
+    global Img_Original
+    global Img_Processada
+    global Processada
+    global Carregado
+    try:
+        #abre uma janela com os valores para aumentar ou diminuir de R G B
+        valM = dialog.askinteger("Input", "digite o valor para alterar na matriz:")
+        valS = dialog.askfloat("Input", "digite o valor para alterar na saturacao:")
+        valB = dialog.askfloat("Input", "digite o valor para alterar no brilho:")
+        #adiciona os valores para a imagem original
+        Img_Processada = convertImg(Img_Original)
+        addImgHSV(Img_Processada, valM, valS, valB )
+        Processada = True
+        visualizarImgProcess()
+        #mostrar a imagem com os valores alterados
+    except:
+        mesBox.showerror(title="", message="erro ao Tratar Canal")
+
+def recuperar_imagem(imagem_espectro):
+    # Aplicar a Transformada Inversa de Fourier
+    imagem_recuperada = np.fft.ifft2(imagem_espectro)
+
+    # A imagem recuperada pode ter componentes complexos devido à transformação inversa
+    # Portanto, pegamos apenas a parte real da imagem
+    imagem_recuperada = np.real(imagem_recuperada)
+
+    return imagem_recuperada
+
+def rgb_para_hex(r, g, b):
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
+def draw(event):
+    global pen_intensity
+    global pen_size
+    global canvas
+    color = rgb_para_hex(pen_intensity, pen_intensity, pen_intensity)
+    x1, y1 = (event.x - pen_size), (event.y - pen_size) 
+    x2, y2 = (event.x + pen_size), (event.y + pen_size) 
+    canvas.create_oval(x1, y1, x2, y2, fill=color, outline='')
+
+def Aplicar():
+    global canvas
+    global wi
+    global hi
+    canvas.update()
+    canvas.postscript(file='canvas.ps', colormode='color')
+
+    img = Image.open('canvas.ps')
+    img = img.resize((wi, hi), Image.Resampling.BILINEAR)
+
+    img = np.fft.ifftshift(img)
+    ImagemOr = recuperar_imagem(np.array(img))
+    
+    cv2.imshow("array", ImagemOr)
+    cv2.waitKey(0)
+    
+
+#Criacao e edicao de fourier
+def Fourrier():
+    #abre Janela
+    global Img_Original
+    global Img_Processada
+    global editWidow
+    global icone
+    global pen_size
+    global pen_intensity
+    global fourrier_Img
+    global Img_edit
+    global canvas
+    global wi
+    global hi
+    #variaveis
+    fourrier_Img = []
+    Img_edit = []
+    pen_size = 5
+    pen_intensity = 255
+
+    #window config
+    editWidow = tk.Toplevel()
+    editWidow.resizable(False, False)
+    editWidow.geometry('1280x720')
+    editWidow.title("Fourrier")
+    editWidow.config(background="#22c995")
+    #frames
+    editFrame = tk.Frame(editWidow, width=280, height=720, bg="white")
+    editFrame.pack(side="left", fill="y")
+    
+    canvas =tk.Canvas(editWidow, width=800, height=700)
+    canvas.pack()
+    canvas.place(x=780, y=360, anchor=CENTER)
+    
+    
+    #botao aplicar
+    Img_edit = cv2.cvtColor(Img_Original, cv2.COLOR_BGR2GRAY)
+    
+    # Aplique a Transformada de Fourier 2D usando np.fft.fft2
+    fft_imagem = np.fft.fft2(Img_edit)
+
+    # Para visualizar o espectro de frequência, você pode fazer o seguinte:
+    fft_imagem_shift = np.fft.fftshift(fft_imagem)
+
+    imag = np.abs(fft_imagem_shift)
+    imag = (imag / np.max(imag) * 255).astype(np.uint8)
+
+    imagem_pil = Image.fromarray(imag)
+    wi, hi = imagem_pil.width, imagem_pil.height
+    
+    imagem_pil = imagem_pil.resize((800, 700), Image.Resampling.BILINEAR)
+    photo = ImageTk.PhotoImage(imagem_pil)
+    
+    canvas.create_image(0, 0, image=photo, anchor=tk.NW)
+    canvas.bind("<B1-Motion>", draw)
+    
+
+    color_button = tk.Button(editFrame, text="Color", command=Aplicar)
+    color_button.pack(pady=15, padx=10)
+
+    size_button = tk.Button(editFrame, text="Color", command=Aplicar)
+    size_button.pack(pady=15, padx=10)
+
+    salvar_button = tk.Button(editFrame, text="Aplicar", command=Aplicar)
+    salvar_button.pack(pady=15, padx=10)
+
+    editWidow.mainloop()
+
+def AplicarFourrier():
+    #abre Janela
+    global Img_Original
+    global Img_Processada
+    global fourrier_Img
+
 #conteudo
 
 def initContent():
@@ -1083,15 +1707,22 @@ def initContent():
     
     editMenu = Menu(barraMenu, tearoff=0)
     barraMenu.add_cascade(label="Edit",menu=editMenu)
+    editMenu.add_command(label="Fourier", command=Fourrier)
     editMenu.add_command(label="Negativo", command=negativo)
-    #RGB
     editMenu.add_command(label="Logaritmo", command=logaritmoRGB)
     editMenu.add_command(label="Gamma", command=correcaoGamaRGB)
     editMenu.add_command(label="Limiarizacao", command=limiarizacaoRGB)
+
+    editMenu.add_separator()
     editMenu.add_command(label="Gray Simple", command=GrayScale)
     editMenu.add_command(label="Gray Ponderada", command=GrayScaleAprim)
     editMenu.add_command(label="Sepia", command=Sepia)
-    #editMenu.add_command(label="Editar", command=editar)
+    editMenu.add_separator()
+
+    editMenu.add_command(label="Chroma Key", command=ChromaKey)
+    editMenu.add_command(label="Ajuste Canal RGB", command=TratarCanalRGB)
+    editMenu.add_command(label="Ajuste Canal CMY", command=TratarCanalCMY)
+    editMenu.add_command(label="Ajuste M, S, B", command=TratarMSB)
 
     #transformacoes
     transformMenu = Menu(editMenu, tearoff=0)
@@ -1104,8 +1735,12 @@ def initContent():
     barraMenu.add_cascade(label="Filtro", menu=filtroMenu)
     filtroMenu.add_command(label="Media", command=Media)
     filtroMenu.add_command(label="Ponderada", command=Ponderada)
-    filtroMenu.add_command(label="Convolucao", command=convRGB)
+    filtroMenu.add_command(label="Mediana 3x3", command=Mediana3)
+    filtroMenu.add_command(label="Mediana 5x5", command=Mediana5)
+    filtroMenu.add_command(label="Convolucao", command=Convolucao)
     filtroMenu.add_command(label="Laplaciano", command=Laplaciano)
+    filtroMenu.add_command(label="High Boost", command=HighBoost)
+    filtroMenu.add_command(label="Sobel", command=Sobel)
     #cria filtros
     criafiltroMenu = Menu(filtroMenu, tearoff=0)
     filtroMenu.add_cascade(label="Cria Filtro", menu=criafiltroMenu)
@@ -1113,8 +1748,11 @@ def initContent():
     criafiltroMenu.add_command(label="Cria Filtro 3", command=criaFiltro3)
     #5x5
     criafiltroMenu.add_command(label="Cria Filtro 5", command=criaFiltro5)
+    #7x7
+    criafiltroMenu.add_command(label="Cria Filtro 7", command=criaFiltro7)
     #9x9
-    #criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
+    criafiltroMenu.add_command(label="Cria Filtro 9", command=criaFiltro9)
+
     
     #histograma
     editMenu.add_separator()
@@ -1123,12 +1761,15 @@ def initContent():
     histMenu.add_command(label="Histograma Original canal R", command=ShowHistogramOR)
     histMenu.add_command(label="Histograma Original canal G", command=ShowHistogramOG)
     histMenu.add_command(label="Histograma Original canal B", command=ShowHistogramOB)
+    histMenu.add_command(label="Histograma Original HSV", command=ShowHistogramOHSV)
     histMenu.add_command(label="Histograma Original canal RGB", command=ShowHistogramORGB)
     histMenu.add_separator()
+
     #HISTOGRAMA IMAGEM PROCESSADA
     histMenu.add_command(label="Histograma Processada canal R", command=ShowHistogramPR)
     histMenu.add_command(label="Histograma Processada canal G", command=ShowHistogramPG)
     histMenu.add_command(label="Histograma Processada canal B", command=ShowHistogramPB)
+    histMenu.add_command(label="Histograma Processada HSV", command=ShowHistogramPHSV)
     histMenu.add_command(label="Histograma Processada canal RGB", command=ShowHistogramPRGB)
     histMenu.add_separator()
     #equalizar
@@ -1147,22 +1788,7 @@ if __name__ == "__main__":
     initWindow()
     initContent()
     window.mainloop()
-    #print(getRGB(343,0.84,0.49))   
-    ''''''''''
-    imagemO = np.zeros((100,100,3), np.uint8)
-    for i in range(99):
-        imagemO[i][i] =     (250,250,250)
-        imagemO[i][i+1] = (125,125,125)
-    ImagemEscalaL = ScaleLinear(5, imagemO)
-    ImagemEscalaN = ScaleNear(5, imagemO)
-    cv2.imshow('ImageWindow', imagemO)
-    cv2.waitKey(0)
-
-    imagens = np.concatenate((convertImg(ImagemEscalaL), convertImg(ImagemEscalaN)), axis=1)
-    cv2.imshow('ImageWindow', imagens)
-    cv2.waitKey(0)
-    '''''''''
-    #print(ImagemEscala)
+    #Fourrier()
 
    
         
