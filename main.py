@@ -179,29 +179,33 @@ def addImgHSV(Img, h, s, v):
 
 #coloca imagem de 0 a 255
 def convertImg(ImgS):
-    Img = ImgS * 1
-    if(CheckNegative(Img) == 1):
-        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
-    if(CheckNegative(Img) == 2):
-        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
-    if(CheckNegative(Img) == 3):
-        addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
+    if(ImgS.max() <= 1 or ImgS.max() >= 255):
+        if(ImgS.min() < 0): 
+            Img = ImgS * 1
+            if(CheckNegative(Img) == 1):
+                addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
+            if(CheckNegative(Img) == 2):
+                addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
+            if(CheckNegative(Img) == 3):
+                addImgRGB(Img, -1*getMin(Img, CheckNegative(Img)))
 
-    if(Img.max() > 255):
-        Img = Img / Img.max()
-        Img = Img * 255
-        
-    elif(CheckDouble(Img) and Img.max() <= 1):
-        Img = Img * 255
+            if(Img.max() > 255):
+                Img = Img / Img.max()
+                Img = Img * 255
+                
+            elif(CheckDouble(Img) and Img.max() <= 1):
+                Img = Img * 255
 
-    return np.uint8(Img)
+            return np.uint8(Img)
+    else:
+        return ImgS
 
 
 def visualizarImgOriginal():
     global Img_Original
     if Carregado: 
         try:
-            cv2.imshow('ImageWindow', convertImg(Img_Original))
+            cv2.imshow('ImageWindow', Img_Original)
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao mostrar imagem")
@@ -212,7 +216,7 @@ def visualizarImgProcess():
     global Img_Processada
     if Processada: 
         try:
-            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao mostrar imagem")
@@ -224,7 +228,7 @@ def visualizarLadoALado():
     global Img_Processada
     if Processada: 
         try:
-            image = np.concatenate((convertImg(Img_Original), convertImg(Img_Processada)), axis=1)
+            image = np.concatenate((Img_Original, convertImg(Img_Processada)), axis=1)
             cv2.imshow('ImageWindow', image)
             cv2.waitKey(0)
         except:
@@ -403,7 +407,7 @@ def logaritmoRGB():
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
                 Img_Processada = np.uint8(Img_Processada)
-                cv2.imshow('ImageWindow', convertImg(Img_Processada))
+                cv2.imshow('ImageWindow', Img_Processada)
                 cv2.waitKey(0)
             except:
                 mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -426,7 +430,7 @@ def logaritmoRGB():
 
                 cv2.normalize(Img_Processada, Img_Processada,0,255,cv2.NORM_MINMAX)
                 Img_Processada = np.uint8(Img_Processada)
-                cv2.imshow('ImageWindow', convertImg(Img_Processada))
+                cv2.imshow('ImageWindow', Img_Processada)
                 cv2.waitKey(0)
             except:
                 mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -468,7 +472,7 @@ def correcaoGamaRGB():
             #transfoma a imagem em um array de floats novamente
             Img_Processada = np.int8(Img_Processada)
            
-            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
         except:
             mesBox.showinfo(title="", message="erro ao processar imagem")
@@ -843,7 +847,7 @@ def MedianaS(size):
                 for j in range(c-1): #x
                     (b, g, r) = getValores3(j, i)
                     Img_Processada[i][j] = (b, g, r)
-            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
             Processada = True
         elif(size == 5):
@@ -851,7 +855,7 @@ def MedianaS(size):
                 for j in range(c-1): #x
                     (b, g, r) = getValores5(j, i)
                     Img_Processada[i][j] =  (b, g, r)
-            cv2.imshow('ImageWindow', convertImg(Img_Processada))
+            cv2.imshow('ImageWindow', Img_Processada)
             cv2.waitKey(0)
             Processada = True
     except:
@@ -1498,7 +1502,7 @@ def ChromaKey():
             mesBox.showerror(title="Arquivo nao suportado", message="Arquivo nao suportado. \nPorfavor escolha um válido")
             return
         
-        Img_Processada = convertImg(Img_Original)
+        Img_Processada = Img_Original*1
         Img_Processada = np.float32(Img_Processada)
         l, c, cha = Img_Processada.shape[:3]
         for i in range(l):
@@ -1524,7 +1528,7 @@ def TratarCanalRGB():
         valG = dialog.askinteger("Input", "digite o valor para aumentar em G:")
         valB = dialog.askinteger("Input", "digite o valor para aumentar em B:")
         #adiciona os valores para a imagem original
-        Img_Processada = convertImg(Img_Original)
+        Img_Processada = Img_Original
         addImg(Img_Processada, valR, valG, valB)
         Processada = True
         visualizarImgProcess()
