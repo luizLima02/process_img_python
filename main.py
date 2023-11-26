@@ -361,6 +361,30 @@ def getRGB_CMY(c, m, y, k):
 
 #processos basicos
 
+def inverter(Img):
+    try:
+        w, h, c = Img.shape[:3]
+        imgRetorno = np.zeros((w, h, c), np.uint8)
+        for i in range(w):
+            for j in range(h):
+                    b, g, r = Img[i][j]
+                    if(b == 0): 
+                        b = 255 
+                    else: 
+                        b = 0
+                    if(g == 0): 
+                        g = 255 
+                    else: 
+                        g = 0
+                    if(r == 0): 
+                        r = 255 
+                    else: 
+                        r = 0
+                    imgRetorno[i][j] = (b, g, r)
+        return imgRetorno
+    except:
+        mesBox.showerror(title="erro na negativa", message="erro na negativa.") 
+
 def negativo():
     global Carregado
     global Processada
@@ -480,38 +504,86 @@ def correcaoGamaRGB():
         Processada = False
         mesBox.showerror(title="erro de tipo", message="Imagem vazia.") 
 
+def limiarizarK(img, k):
+    try:
+        limiar = k
+        l, c, cha = img.shape[:3]
+        imgRetorno = np.zeros((l, c, cha), np.uint8)
+        for i in range(l):
+            for j in range(c):
+                    b, g, r = img[i][j]
+                    if(b >= limiar): 
+                        b = 255 
+                    else: 
+                        b = 0
+                    if(g >= limiar): 
+                        g = 255 
+                    else: 
+                        g = 0
+                    if(r >= limiar): 
+                        r = 255 
+                    else: 
+                        r = 0
+                    imgRetorno[i][j] = (b, g, r)
+
+        return imgRetorno
+    except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+
+def limiarizar(img):
+    try:
+        limiar = dialog.askinteger("Input", "Selecione o Limiar a ser utilizado")
+        l, c, cha = img.shape[:3]
+        imgRetorno = np.zeros((l, c, cha), np.uint8)
+        for i in range(l):
+            for j in range(c):
+                    b, g, r = img[i][j]
+                    if(b >= limiar): 
+                        b = 255 
+                    else: 
+                        b = 0
+                    if(g >= limiar): 
+                        g = 255 
+                    else: 
+                        g = 0
+                    if(r >= limiar): 
+                        r = 255 
+                    else: 
+                        r = 0
+                    imgRetorno[i][j] = (b, g, r)
+
+        return imgRetorno
+    except:
+            mesBox.showinfo(title="", message="erro ao processar imagem")
+
 def limiarizacaoRGB():
     global Processada
     global Img_Original
     global Img_Processada
-    if Carregado:
-        try:
-            Processada = True
-            limiar = dialog.askinteger("Input", "Selecione o Limiar a ser utilizado")
-            l, c, cha = Img_Original.shape[:3]
-            Img_Processada = np.zeros((l, c, cha), np.uint8)
+    try:
+       Img_Processada = limiarizar(Img_Original)
+       cv2.imshow('ImageWindow', Img_Processada)
+       cv2.waitKey(0)
+       Processada = True
+    except:
+        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
+
+
+def GrayScaleK(Img):
+    try:
+            l, c, cha = Img.shape[:3]
+            Img = np.float32(Img)
+            ImagemRetorno = np.zeros((l, c, cha), np.uint8)
             for i in range(l):
                 for j in range(c):
-                        b, g, r = Img_Original[i][j]
-                        if(b >= limiar): 
-                            b = 255 
-                        else: 
-                            b = 0
-                        if(g >= limiar): 
-                            g = 255 
-                        else: 
-                            g = 0
-                        if(r >= limiar): 
-                            r = 255 
-                        else: 
-                            r = 0
-                        Img_Processada[i][j] = (b, g, r)
-            cv2.imshow('ImageWindow', Img_Processada)
-            cv2.waitKey(0)
-        except:
+                        (b, g, r) = Img[i][j]
+                        valor = r+g+b 
+                        valor = valor / 3
+                        ImagemRetorno[i][j] = (valor, valor, valor)
+            Img = np.uint8(Img)
+            return ImagemRetorno
+    except:
             mesBox.showinfo(title="", message="erro ao processar imagem")
-    else:
-        mesBox.showerror(title="erro de conteudo", message="Imagem vazia.") 
 
 def GrayScale():
     global Processada
@@ -1689,6 +1761,156 @@ def AplicarFourrier():
     global fourrier_Img
 
 #conteudo
+def getPB(Img, x, y):
+    l, c = Img.shape[:2]
+    if(x >= c) or (x < 0) or (y < 0) or (y >= l):
+        return 255
+    else:
+        b, g, r = Img[y][x]
+        return b
+    
+def comparar(i, j):
+    return int((i == 0 and j == 255))
+
+def A(Img, x, y):
+    contador = 0
+    p2 = getPB(Img, x, y-1)
+    p3 = getPB(Img, x+1, y-1)
+    p4 = getPB(Img, x+1, y)
+    p5 = getPB(Img, x+1, y+1)
+    p6 = getPB(Img, x, y+1)
+    p7 = getPB(Img, x-1, y+1)
+    p8 = getPB(Img, x-1, y)
+    p9 = getPB(Img, x-1, y-1)
+    contador += comparar(p2, p3) + comparar(p3, p4) + comparar(p4, p5) + comparar(p5, p6) + comparar(p6, p7) + comparar(p7, p8) + comparar(p8, p9) + comparar(p9, p2) 
+    return contador
+
+def B(Img, x, y):
+    contador = 0
+    pontos = []
+    pontos.append(getPB(Img, x, y-1))
+    pontos.append(getPB(Img, x+1, y-1))
+    pontos.append(getPB(Img, x+1, y))
+    pontos.append(getPB(Img, x+1, y+1))
+    pontos.append(getPB(Img, x, y+1))
+    pontos.append(getPB(Img, x-1, y+1))
+    pontos.append(getPB(Img, x-1, y))
+    pontos.append(getPB(Img, x-1, y-1))
+
+    for i in pontos:
+        if(i == 0):
+            contador += 1
+
+    return contador
+
+def p246(Img, x, y):
+    p2 = getPB(Img, x, y-1)
+    p4 = getPB(Img, x+1, y)
+    p6 = getPB(Img, x, y+1)
+    return(p2 == 255 or p4 == 255 or p6 == 255)
+
+def p468(Img, x, y):
+    p4 = getPB(Img, x+1, y)
+    p6 = getPB(Img, x, y+1)
+    p8 = getPB(Img, x-1, y)
+    return(p4 == 255 or p6 == 255 or p8 == 255)
+
+def p248(Img, x, y):
+    p2 = getPB(Img, x, y-1)
+    p4 = getPB(Img, x+1, y)
+    p8 = getPB(Img, x-1, y)
+    return(p2 == 255 or p4 == 255 or p8 == 255)
+
+def p268(Img, x, y):
+    p2 = getPB(Img, x, y-1)
+    p6 = getPB(Img, x, y+1)
+    p8 = getPB(Img, x-1, y)
+    return(p2 == 255 or p8 == 255 or p6 == 255)
+
+def passo1(Img):
+    modificado = False
+    w, h, c = Img.shape[:3]
+    Img_Retorno = np.zeros((w, h, c), np.uint8)
+    for i in range(w):
+        for j in range(h):
+         (b, g, r) = Img[i][j]
+         if(b == 0 and (A(Img, j, i) == 1) and (B(Img, j, i) >= 2 and B(Img, j, i) <= 6) and p246(Img, j, i) == True and p468(Img, j, i) == True):
+            Img_Retorno[i][j] = (255, 255, 255)
+            modificado = True
+         else:
+             Img_Retorno[i][j] = Img[i][j]
+
+    return modificado, Img_Retorno
+
+def passo2(Img):
+    modificado = False
+    w, h, c = Img.shape[:3]
+    Img_Retorno = np.zeros((w, h, c), np.uint8)
+    for i in range(w):
+        for j in range(h):
+         (b, g, r) = Img[i][j]
+         if(b == 0 and (A(Img, j, i) == 1) and (B(Img, j, i) >= 2 and B(Img, j, i) <= 6) and p248(Img, j, i) == True and p268(Img, j, i) == True):
+            Img_Retorno[i][j] = (255, 255, 255)
+            modificado = True
+         else:
+             Img_Retorno[i][j] = Img[i][j]
+
+    return modificado, Img_Retorno
+    
+
+def Zhang_Suen(Img):
+    k = 0
+    while True:
+        print(f"iteracao: {k}")
+        #passo 1
+        p1, Img = passo1(Img)
+        print("passo 1 -> feito")
+        #passo 2
+        p2, Img = passo2(Img)
+        print("passo 2 -> feito")
+        k += 1
+        if(p1 == False and p2 == False):
+            print("Terminado")
+            return Img
+    
+
+
+def EsqueletoGray():
+    global Processada
+    global Img_Processada
+    global Img_Original
+    try:
+        Img_Processada = GrayScaleK(Img_Original)
+        Img_Processada = limiarizarK(Img_Processada, 100)
+        Img_Processada = inverter(Img_Processada)
+        cv2.imshow('ImageWindow', Img_Processada)
+        cv2.waitKey(0)
+        Img_Processada = Zhang_Suen(Img_Processada)
+        cv2.imshow('ImageWindow', Img_Processada)
+        cv2.waitKey(0)
+    except:
+        mesBox.showerror(title="", message="erro")
+
+def EsqueletoBin():
+    global Processada
+    global Img_Processada
+    global Img_Original
+    try:
+        branco = dialog.askstring("Input", "Os objetos da imagem estao branco ?(s/n)")
+        if(branco.lower() == "s"):
+            Img_Processada = inverter(Img_Processada)
+            Img_Processada = limiarizarK(Img_Processada, 100)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        else:
+            Img_Processada = limiarizarK(Img_Original, 100)
+            cv2.imshow('ImageWindow', Img_Processada)
+            cv2.waitKey(0)
+        Img_Processada = Zhang_Suen(Img_Processada)
+        cv2.imshow('ImageWindow', Img_Processada)
+        cv2.waitKey(0)
+    except:
+        mesBox.showerror(title="", message="erro")
 
 def initContent():
     #barra do menu
@@ -1715,7 +1937,8 @@ def initContent():
     editMenu.add_command(label="Negativo", command=negativo)
     editMenu.add_command(label="Logaritmo", command=logaritmoRGB)
     editMenu.add_command(label="Gamma", command=correcaoGamaRGB)
-    editMenu.add_command(label="Limiarizacao", command=limiarizacaoRGB)
+    editMenu.add_command(label="EsqueletoGray", command=EsqueletoGray)
+    editMenu.add_command(label="EsqueletoBin", command=EsqueletoBin)
 
     editMenu.add_separator()
     editMenu.add_command(label="Gray Simple", command=GrayScale)
