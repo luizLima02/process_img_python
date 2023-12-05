@@ -2010,7 +2010,6 @@ def passo2(Img):
 
     return modificado, Img_Retorno
 
-
 def Zhang_Suen(Img):
     k = 0
     while True:
